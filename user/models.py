@@ -11,17 +11,19 @@ class User(models.Model):
     username = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
     password = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
-    phonenumber = models.CharField(max_length=11)
-    email = models.CharField(max_length=MAX_CHAR_LENGTH)
+    phonenumber = models.CharField(max_length=11,default="")
+    email = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     class Meta:
-        indexes = [models.Index(fields=["name"])]
+        indexes = [models.Index(fields=["username"])]
         
     def serialize(self):
         return {
             "id": self.id, 
-            "name": self.name, 
+            "username": self.username, 
+            "phonenumber": self.phonenumber,
+            "email": self.email,
             "createdAt": self.created_time,
         }
     
     def __str__(self) -> str:
-        return self.name
+        return self.username
