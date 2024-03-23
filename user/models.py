@@ -11,7 +11,6 @@ class User(models.Model):
     name = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
     password = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
-    
     class Meta:
         indexes = [models.Index(fields=["name"])]
         
