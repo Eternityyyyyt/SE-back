@@ -8,9 +8,11 @@ from utils.utils_require import MAX_CHAR_LENGTH
 
 class User(models.Model):
     id = models.BigAutoField(primary_key=True)
-    name = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
+    username = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
     password = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
+    phonenumber = models.CharField(max_length=11)
+    email = models.CharField(max_length=MAX_CHAR_LENGTH)
     class Meta:
         indexes = [models.Index(fields=["name"])]
         

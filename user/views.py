@@ -1,4 +1,5 @@
 import json
+import re
 from django.http import HttpRequest, HttpResponse
 
 from user.models import User
@@ -25,8 +26,8 @@ def login(req: HttpRequest):
     
     # TODO Start: [Student] Finish the login function according to the comments below
     # If the user does not exist, create a new user and save; while if the user exists, check the password
-    if User.objects.filter(name=username).exists():
-        user = User.objects.filter(name=username).first()
+    if User.objects.filter(username=username).exists():
+        user = User.objects.filter(username=username).first()
         if user.password == password:
             return request_success({"token": generate_jwt_token(username)})
         else:
@@ -38,6 +39,18 @@ def login(req: HttpRequest):
     
     # TODO End: [Student] Finish the login function according to the comments above
 
+def check_require(body):
+    username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
+    phonenumber = require(body, "phonenumber", "string", err_msg="Missing or error type of [phonenumber]")
+    email = require(body, "email", "string", err_msg="Missing or error type of [email]")
+    
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    
+    assert 0 < len(username) <= MAX_CHAR_LENGTH, "Bad length of [username]"
+    assert len(phonenumber) == 11, "Bad length of [phonenumber]"
+    assert re.match(pattern, email), "Bad format of [email]"
+    return username, phonenumber, email
+    
 @CheckRequire
 def register(req: HttpRequest):
     if req.method != "POST":
@@ -46,11 +59,12 @@ def register(req: HttpRequest):
     # Request body example: {"userName": "Ashitemaru", "password": "123456"}
     body = json.loads(req.body.decode("utf-8"))
     
-    username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     
-    if User.objects.filter(name=username).exists():
+    username, phonenumber, email = check_require(body)
+    
+    if User.objects.filter(username=username).exists():
         return request_failed("User already exists", 401)
     else:
-        User.objects.create(name=username, password=password)
+        User.objects.create(username=username, password=password, phonenumber=phonenumber, email=email)
         return request_success({"token": generate_jwt_token(username)})
