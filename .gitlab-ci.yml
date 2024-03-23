@@ -24,11 +24,11 @@ unit-test:
   script:
     - python manage.py makemigrations user
     - python manage.py migrate
-  # after_script:
-  #   - SUFFIX=$RANDOM
-  #   - curl "http://api.secoder.net/static/sonar-scanner.tar.gz" -s -o "/tmp/sonar-$SUFFIX.tar.gz"
-  #   - tar -xf "/tmp/sonar-$SUFFIX.tar.gz"  -C /opt
-  #   - /opt/sonar-scanner/bin/sonar-scanner
+  after_script:
+    - SUFFIX=$RANDOM
+    - curl "http://api.secoder.net/static/sonar-scanner.tar.gz" -s -o "/tmp/sonar-$SUFFIX.tar.gz"
+    - tar -xf "/tmp/sonar-$SUFFIX.tar.gz"  -C /opt
+    - /opt/sonar-scanner/bin/sonar-scanner
 
 deploy:
   stage: deploy
