@@ -24,8 +24,7 @@ def login(req: HttpRequest):
     username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     
-    # TODO Start: [Student] Finish the login function according to the comments below
-    # If the user does not exist, create a new user and save; while if the user exists, check the password
+
     if User.objects.filter(username=username).exists():
         user = User.objects.filter(username=username).first()
         if user.password == password:
@@ -34,10 +33,6 @@ def login(req: HttpRequest):
             return request_failed("Wrong password", 401)
     else:
         return request_failed("User does not exist", 401)
-    # If new user or checking success, return code 0, "Succeed", with {"token": generate_jwt_token(user_name)}
-    # Else return request_failed with code 2, "Wrong password", http status code 401
-    
-    # TODO End: [Student] Finish the login function according to the comments above
 
 def check_require(body):
     username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
