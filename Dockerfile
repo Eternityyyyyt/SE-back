@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.9
 
 ENV DEPLOY 1
 
@@ -12,6 +12,4 @@ COPY . .
 
 EXPOSE 80
 
-COPY start.sh .
-
-CMD ["sh ./start.sh"]
+CMD ["./start.sh"]
