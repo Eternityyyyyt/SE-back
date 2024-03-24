@@ -21,15 +21,15 @@ def login(req: HttpRequest):
     # Request body example: {"userName": "Ashitemaru", "password": "123456"}
     body = json.loads(req.body.decode("utf-8"))
     
-    username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     
     # TODO Start: [Student] Finish the login function according to the comments below
     # If the user does not exist, create a new user and save; while if the user exists, check the password
-    if User.objects.filter(username=username).exists():
-        user = User.objects.filter(username=username).first()
+    if User.objects.filter(userName=userName).exists():
+        user = User.objects.filter(userName=userName).first()
         if user.password == password:
-            return request_success({"token": generate_jwt_token(username)})
+            return request_success({"token": generate_jwt_token(userName)})
         else:
             return request_failed("Wrong password", 401)
     else:
@@ -40,16 +40,16 @@ def login(req: HttpRequest):
     # TODO End: [Student] Finish the login function according to the comments above
 
 def check_require(body):
-    username = require(body, "username", "string", err_msg="Missing or error type of [userName]")
-    phonenumber = require(body, "phonenumber", "string", err_msg="Missing or error type of [phonenumber]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    phoneNumber = require(body, "phoneNumber", "string", err_msg="Missing or error type of [phoneNumber]")
     email = require(body, "email", "string", err_msg="Missing or error type of [email]")
     
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
-    assert 0 < len(username) <= MAX_CHAR_LENGTH, "Bad length of [username]"
-    assert len(phonenumber) == 11, "Bad length of [phonenumber]"
+    assert 0 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
+    assert len(phoneNumber) == 11, "Bad length of [phoneNumber]"
     assert re.match(pattern, email), "Bad format of [email]"
-    return username, phonenumber, email
+    return userName, phoneNumber, email
     
 @CheckRequire
 def register(req: HttpRequest):
@@ -61,10 +61,10 @@ def register(req: HttpRequest):
     
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     
-    username, phonenumber, email = check_require(body)
+    userName, phoneNumber, email = check_require(body)
     
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(userName=userName).exists():
         return request_failed("User already exists", 401)
     else:
-        User.objects.create(username=username, password=password, phonenumber=phonenumber, email=email)
-        return request_success({"token": generate_jwt_token(username)})
+        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email)
+        return request_success({"token": generate_jwt_token(userName)})
