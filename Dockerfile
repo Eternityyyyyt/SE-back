@@ -12,4 +12,6 @@ COPY . .
 
 EXPOSE 80
 
+COPY start.sh .
+
 CMD ["sh ./start.sh"]
