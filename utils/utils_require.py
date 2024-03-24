@@ -13,7 +13,7 @@ def CheckRequire(check_fn):
         except Exception as e:
             # Handle exception e
             error_code = -2 if len(e.args) < 2 else e.args[1]
-            return request_failed(error_code, e.args[0], 400)  # Refer to below
+            return request_failed(e.args[0], 400)  # Refer to below
     return decorated
 
 
