@@ -31,9 +31,9 @@ def login(req: HttpRequest):
         if user.password == password:
             return request_success({"token": generate_jwt_token(userName)})
         else:
-            return request_failed("Wrong password", 401)
+            return request_failed(2 ,"Wrong password", 401)
     else:
-        return request_failed("User does not exist", 401)
+        return request_failed(1, "User does not exist", 401)
 
 def check_require(body):
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
@@ -60,7 +60,7 @@ def register(req: HttpRequest):
     userName, phoneNumber, email = check_require(body)
     
     if User.objects.filter(userName=userName).exists():
-        return request_failed("User already exists", 401)
+        return request_failed(1,"User already exists", 401)
     else:
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email)
         return request_success()
@@ -76,9 +76,9 @@ def user_board(req: HttpRequest, userName:any) :
             jwt_token = req.headers.get("Authorization")
             data = check_jwt_token(jwt_token)
             if data == None:
-                return request_failed("Invalid or expired JWT",401)
+                return request_failed(2,"Invalid or expired JWT",401)
             if user.userName != data["userName"]:
-                return request_failed("Cannot view info of other users",403)
+                return request_failed(3, "Cannot view info of other users",403)
             return_data = {
                 "userName": user.userName,
                 "phoneNumber": user.phoneNumber,
@@ -86,22 +86,22 @@ def user_board(req: HttpRequest, userName:any) :
             }
             return request_success(return_data)
         else:
-            return request_failed("User not found" , 404)
+            return request_failed(1,"User not found" , 404)
     
     elif req.method == "DELETE":
         if user:
             jwt_token = req.headers.get("Authorization")
             data = check_jwt_token(jwt_token)
             if data == None:
-                return request_failed("Invalid or expired JWT", 401)
+                return request_failed(2,"Invalid or expired JWT", 401)
             if user.userName != data["userName"]:
-                return request_failed("Cannot delete other users", 403)
+                return request_failed(3, "Cannot delete other users", 403)
             else:
                 user.delete()
                 return request_success({
                     "info": "Successfully deleted user"
                 })
         else:
-            return request_failed("User not found" , 404)
+            return request_failed(1 ,"User not found" , 404)
     else:
         return BAD_METHOD
