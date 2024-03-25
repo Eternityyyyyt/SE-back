@@ -82,8 +82,7 @@ def user_board(req: HttpRequest, userName:any) :
             return_data = {
                 "userName": user.userName,
                 "phoneNumber": user.phoneNumber,
-                "email": user.email,
-                "info": "Get user info succeeded"
+                "email": user.email
             }
             return request_success(return_data)
         else:
