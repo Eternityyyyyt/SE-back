@@ -63,7 +63,7 @@ def register(req: HttpRequest):
         return request_failed("User already exists", 401)
     else:
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email)
-        return request_success({"token": generate_jwt_token(userName)})
+        return request_success()
     
 @CheckRequire
 def user_board(req: HttpRequest, userName:any) :
