@@ -56,7 +56,7 @@ def register(req: HttpRequest):
     body = json.loads(req.body.decode("utf-8"))
     
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
-    
+    assert 0 < len(password) <= MAX_CHAR_LENGTH, "Bad length of [password]"
     userName, phoneNumber, email = check_require(body)
     
     if User.objects.filter(userName=userName).exists():
@@ -68,7 +68,6 @@ def register(req: HttpRequest):
 @CheckRequire
 def user_board(req: HttpRequest, userName:any) :
     user_name = require({"userName": userName}, "userName", "string", err_msg="Bad param [userName]", err_code=-1)
-    assert 0 < len(user_name) <= 50, "Bad param [userName]"
     user = User.objects.filter(userName = user_name).first()
     if req.method == "GET":
 
