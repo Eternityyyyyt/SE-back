@@ -64,3 +64,45 @@ def register(req: HttpRequest):
     else:
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email)
         return request_success({"token": generate_jwt_token(userName)})
+    
+@CheckRequire
+def user_board(req: HttpRequest, userName:any) :
+    user_name = require({"userName": userName}, "userName", "string", err_msg="Bad param [userName]", err_code=-1)
+    assert 0 < len(user_name) <= 50, "Bad param [userName]"
+    user = User.objects.filter(userName = user_name).first()
+    if req.method == "GET":
+
+        if user:
+            jwt_token = req.headers.get("Authorization")
+            data = check_jwt_token(jwt_token)
+            if data == None:
+                return request_failed("Invalid or expired JWT",401)
+            if user.userName != data["userName"]:
+                return request_failed("Cannot view info of other users",403)
+            return_data = {
+                "userName": user.userName,
+                "phoneNumber": user.phoneNumber,
+                "email": user.email,
+                "info": "Get user info succeeded"
+            }
+            return request_success(return_data)
+        else:
+            return request_failed("User not found" , 404)
+    
+    elif req.method == "DELETE":
+        if user:
+            jwt_token = req.headers.get("Authorization")
+            data = check_jwt_token(jwt_token)
+            if data == None:
+                return request_failed("Invalid or expired JWT", 401)
+            if user.userName != data["userName"]:
+                return request_failed("Cannot delete other users", 403)
+            else:
+                user.delete()
+                return request_success({
+                    "info": "Successfully deleted user"
+                })
+        else:
+            return request_failed("User not found" , 404)
+    else:
+        return BAD_METHOD
