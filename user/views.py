@@ -73,7 +73,7 @@ def user_board(req: HttpRequest, userName:any) :
 
         if user:
             jwt_token = req.headers.get("Authorization")
-            print(jwt_token) #Debug
+            #print(jwt_token) #Debug
             data = check_jwt_token(jwt_token)
             if data == None:
                 return request_failed(2,"Invalid or expired JWT",401)
@@ -91,7 +91,7 @@ def user_board(req: HttpRequest, userName:any) :
     elif req.method == "DELETE":
         if user:
             jwt_token = req.headers.get("Authorization")
-            print(jwt_token) #Debug
+            #print(jwt_token) #Debug
             data = check_jwt_token(jwt_token)
             if data == None:
                 return request_failed(2,"Invalid or expired JWT", 401)
