@@ -75,10 +75,10 @@ def user_board(req: HttpRequest, userName:any) :
             jwt_token = req.headers.get("Authorization")
             data = check_jwt_token(jwt_token)
             if data == None:
-                print(jwt_token) #Debug
+                #print(jwt_token) #Debug
                 return request_failed(2,"Invalid or expired JWT",401)
             if user.userName != data["userName"]:
-                print(jwt_token) #Debug
+                #print(jwt_token) #Debug
                 return request_failed(3, "Cannot view info of other users",403)
             return_data = {
                 "userName": user.userName,
@@ -94,10 +94,10 @@ def user_board(req: HttpRequest, userName:any) :
             jwt_token = req.headers.get("Authorization")
             data = check_jwt_token(jwt_token)
             if data == None:
-                print(jwt_token) #Debug
+                #print(jwt_token) #Debug
                 return request_failed(2,"Invalid or expired JWT", 401)
             if user.userName != data["userName"]:
-                print(jwt_token) #Debug
+                #print(jwt_token) #Debug
                 return request_failed(3, "Cannot delete other users", 403)
             else:
                 user.delete()
