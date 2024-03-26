@@ -62,6 +62,7 @@ def check_jwt_token(token: str) -> Optional[dict]:
     try:
         header_b64, payload_b64, signature_b64 = token.split(".")
     except:
+        print("CheckJwtToken:Bad jwt format")
         return None
 
     payload_str = b64url_decode(payload_b64)
@@ -72,11 +73,13 @@ def check_jwt_token(token: str) -> Optional[dict]:
     signature_b64_check = b64url_encode(signature_check)
     
     if signature_b64_check != signature_b64:
+        print("CheckJwtToken:Bad signature")
         return None
     
     # Check expire
     payload = json.loads(payload_str)
     if payload["exp"] < time.time():
+        print("CheckJwtToken:Expired")
         return None
     
     return payload["data"]
