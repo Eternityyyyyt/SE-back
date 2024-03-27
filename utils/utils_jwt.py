@@ -8,7 +8,8 @@ from typing import Optional
 
 # c.f. https://thuse-course.github.io/course-index/basic/jwt/#jwt
 # !Important! Change this to your own salt, better randomly generated!"
-SALT = ("KawaiiNana" + datetime.datetime.now().strftime("%Y%m%d%H%M")).encode("utf-8")
+#SALT = ("KawaiiNana" + datetime.datetime.now().strftime("%Y%m%d%H%M")).encode("utf-8")
+SALT = ("KawaiiNana").encode("utf-8")
 EXPIRE_IN_SECONDS = 60 * 60 * 24 * 1  # 1 day
 ALT_CHARS = "-_".encode("utf-8")
 
