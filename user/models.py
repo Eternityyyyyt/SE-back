@@ -13,6 +13,7 @@ class User(models.Model):
     created_time = models.FloatField(default=utils_time.get_timestamp)
     phoneNumber = models.CharField(max_length=11,default="")
     email = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
+    nickname = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     class Meta:
         indexes = [models.Index(fields=["userName"])]
         

@@ -66,7 +66,7 @@ def register(req: HttpRequest):
     if User.objects.filter(userName=userName).exists():
         return request_failed(1,"User already exists", 401)
     else:
-        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email)
+        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=userName)
         return request_success()
     
 @CheckRequire
