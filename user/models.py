@@ -21,6 +21,7 @@ class User(models.Model):
         return {
             "id": self.id, 
             "userName": self.userName, 
+            "nickname": self.nickname,
             "phoneNumber": self.phoneNumber,
             "email": self.email,
             "createdAt": self.created_time,
