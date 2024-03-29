@@ -2,7 +2,7 @@ import json
 import re
 from django.http import HttpRequest, HttpResponse
 
-from user.models import User
+from user.models import User, FriendRequest
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
@@ -143,15 +143,32 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
     body = json.loads(req.body.decode("utf-8"))
     senderName = require(body, "senderName", "string", err_msg="Missing or error type of [sender]")
     sendBySearch = require(body, "sendBySearch", "boolean", err_msg="Missing or error type of [sendBySearch]")
-    request_message = require(body, "request_message", "string", err_msg="Missing or error type of [request_message]")
+    requestMessage = require(body, "requestMessage", "string", err_msg="Missing or error type of [requestMessage]")
     pattern_whitelist = r'^[0-9a-zA-Z_]+$'
-    assert re.match(pattern_whitelist, receiverName), f"[getterName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', getterName)}"
-    assert re.match(pattern_whitelist, senderName), f"[sender] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', sender)}"
+    assert re.match(pattern_whitelist, receiverName), f"[getterName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', receiverName)}"
+    assert re.match(pattern_whitelist, senderName), f"[sender] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', senderName)}"
     
     receiver = User.objects.filter(userName = receiverName).first()
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if senderName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
     sender = User.objects.filter(userName = senderName).first()
     if sender:
         if receiver:
-            pass
+            if senderName == receiverName:
+                return request_failed(1,"Cannot send friend request to yourself", 400)
+            else:
+                if FriendRequest.objects.filter(sender=sender, receiver=receiver).exists():
+                    # TODO: revise to filter whether friendship is created
+                    return request_failed(3,"Friend request already exists", 400)
+                else:
+                    FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
+                    return request_success()
         else:
             return request_failed(1,"Target user not found" , 404)
+        
+    else:
+        return request_failed(1,"Sender not found" , 404)
