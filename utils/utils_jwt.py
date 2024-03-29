@@ -8,7 +8,8 @@ from typing import Optional
 
 # c.f. https://thuse-course.github.io/course-index/basic/jwt/#jwt
 # !Important! Change this to your own salt, better randomly generated!"
-SALT = ("KawaiiNana" + datetime.datetime.now().strftime("%Y%m%d%H%M")).encode("utf-8")
+#SALT = ("KawaiiNana" + datetime.datetime.now().strftime("%Y%m%d%H%M")).encode("utf-8")
+SALT = ("KawaiiNana").encode("utf-8")
 EXPIRE_IN_SECONDS = 60 * 60 * 24 * 1  # 1 day
 ALT_CHARS = "-_".encode("utf-8")
 
@@ -62,6 +63,7 @@ def check_jwt_token(token: str) -> Optional[dict]:
     try:
         header_b64, payload_b64, signature_b64 = token.split(".")
     except:
+        print("CheckJwtToken:Bad jwt format")
         return None
 
     payload_str = b64url_decode(payload_b64)
@@ -72,11 +74,13 @@ def check_jwt_token(token: str) -> Optional[dict]:
     signature_b64_check = b64url_encode(signature_check)
     
     if signature_b64_check != signature_b64:
+        print("CheckJwtToken:Bad signature")
         return None
     
     # Check expire
     payload = json.loads(payload_str)
     if payload["exp"] < time.time():
+        print("CheckJwtToken:Expired")
         return None
     
     return payload["data"]

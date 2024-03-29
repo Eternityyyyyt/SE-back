@@ -20,10 +20,11 @@ def login(req: HttpRequest):
     
     # Request body example: {"userName": "Ashitemaru", "password": "123456"}
     body = json.loads(req.body.decode("utf-8"))
-    
+    pattern_whitelist = r'^[0-9a-zA-Z_]+$'
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
-    
+    assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+    assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
     # TODO Start: [Student] Finish the login function according to the comments below
     # If the user does not exist, create a new user and save; while if the user exists, check the password
     if User.objects.filter(userName=userName).exists():
@@ -39,12 +40,13 @@ def check_require(body):
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
     phoneNumber = require(body, "phoneNumber", "string", err_msg="Missing or error type of [phoneNumber]")
     email = require(body, "email", "string", err_msg="Missing or error type of [email]")
-    
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    
+    pattern_whitelist = r'^[0-9a-zA-Z_]+$'
+    pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern_phoneNumber = r"^\d{11}$"
     assert 0 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
-    assert len(phoneNumber) == 11, "Bad length of [phoneNumber]"
-    assert re.match(pattern, email), "Bad format of [email]"
+    assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+    assert re.match(pattern_phoneNumber, phoneNumber), "Bad format of [phoneNumber]"
+    assert re.match(pattern_email, email), "Bad format of [email]"
     return userName, phoneNumber, email
     
 @CheckRequire
@@ -56,7 +58,9 @@ def register(req: HttpRequest):
     body = json.loads(req.body.decode("utf-8"))
     
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
+    pattern_whitelist = r'^[0-9a-zA-Z_]+$'
     assert 0 < len(password) <= MAX_CHAR_LENGTH, "Bad length of [password]"
+    assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
     userName, phoneNumber, email = check_require(body)
     
     if User.objects.filter(userName=userName).exists():
@@ -73,6 +77,7 @@ def user_board(req: HttpRequest, userName:any) :
 
         if user:
             jwt_token = req.headers.get("Authorization")
+            print(jwt_token) #Debug
             data = check_jwt_token(jwt_token)
             if data == None:
                 return request_failed(2,"Invalid or expired JWT",401)
@@ -90,6 +95,7 @@ def user_board(req: HttpRequest, userName:any) :
     elif req.method == "DELETE":
         if user:
             jwt_token = req.headers.get("Authorization")
+            print(jwt_token) #Debug
             data = check_jwt_token(jwt_token)
             if data == None:
                 return request_failed(2,"Invalid or expired JWT", 401)
