@@ -29,3 +29,22 @@ class User(models.Model):
     
     def __str__(self) -> str:
         return self.userName
+
+class FriendRequest:
+    id = models.BigAutoField(primary_key=True)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sender")
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="receiver")
+    sendBySearch = models.BooleanField(default=False)
+    requstMessage = models.CharField(max_length=100,default="")
+    created_time = models.FloatField(default=utils_time.get_timestamp)
+    
+    class Meta:
+        indexes = [models.Index(fields=["sender", "receiver"])]
+        
+    def serialize(self):
+        return {
+            "id": self.id,
+            "sender": return_field(self.sender),
+            "receiver": return_field(self.receiver),
+            "createdAt": self.created_time,
+        }
