@@ -37,7 +37,7 @@ class FriendRequest:
     sendBySearch = models.BooleanField(default=False)
     requstMessage = models.CharField(max_length=100,default="")
     created_time = models.FloatField(default=utils_time.get_timestamp)
-    
+    status = models.IntegerField(default=0)
     class Meta:
         indexes = [models.Index(fields=["sender", "receiver"])]
         
@@ -49,4 +49,5 @@ class FriendRequest:
             "sendBySearch": self.sendBySearch,
             "requstMessage": self.requstMessage,
             "createdAt": self.created_time,
+            "status": self.status
         }
