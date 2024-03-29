@@ -25,8 +25,6 @@ def login(req: HttpRequest):
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
     assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
-    # TODO Start: [Student] Finish the login function according to the comments below
-    # If the user does not exist, create a new user and save; while if the user exists, check the password
     if User.objects.filter(userName=userName).exists():
         user = User.objects.filter(userName=userName).first()
         if user.password == password:
