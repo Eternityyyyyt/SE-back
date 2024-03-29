@@ -84,9 +84,12 @@ def user_board(req: HttpRequest, userName:any) :
             if user.userName != data["userName"]:
                 return request_failed(3, "Cannot view info of other users",403)
             return_data = {
-                "userName": user.userName,
-                "phoneNumber": user.phoneNumber,
-                "email": user.email
+                "userData": {
+                    "userName": user.userName,
+                    "nickname": user.nickname,
+                    "phoneNumber": user.phoneNumber,
+                    "email": user.email
+                }
             }
             return request_success(return_data)
         else:
