@@ -24,14 +24,14 @@ class User(models.Model):
             "nickname": self.nickname,
             "phoneNumber": self.phoneNumber,
             "email": self.email,
-            "createdAt": self.created_time,
+            "created_time": self.created_time,
         }
     
     def __str__(self) -> str:
         return self.userName
 
 class FriendRequest:
-    id = models.BigAutoField(primary_key=True)
+    request_id = models.BigAutoField(primary_key=True)
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sender")
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="receiver")
     sendBySearch = models.BooleanField(default=False)
@@ -43,11 +43,11 @@ class FriendRequest:
         
     def serialize(self):
         return {
-            "id": self.id,
+            "request_id": self.request_id,
             "sender": return_field(self.sender),
             "receiver": return_field(self.receiver),
             "sendBySearch": self.sendBySearch,
             "requstMessage": self.requstMessage,
-            "createdAt": self.created_time,
+            "created_time": self.created_time,
             "status": self.status
         }
