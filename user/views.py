@@ -134,3 +134,24 @@ def search_user(req: HttpRequest, userName:any) :
             return request_failed(1,"User not found" , 404) 
     else:
         return BAD_METHOD
+    
+@CheckRequire
+def send_friend_request(req: HttpRequest, receiverName:any) :
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    senderName = require(body, "senderName", "string", err_msg="Missing or error type of [sender]")
+    sendBySearch = require(body, "sendBySearch", "boolean", err_msg="Missing or error type of [sendBySearch]")
+    request_message = require(body, "request_message", "string", err_msg="Missing or error type of [request_message]")
+    pattern_whitelist = r'^[0-9a-zA-Z_]+$'
+    assert re.match(pattern_whitelist, receiverName), f"[getterName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', getterName)}"
+    assert re.match(pattern_whitelist, senderName), f"[sender] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', sender)}"
+    
+    receiver = User.objects.filter(userName = receiverName).first()
+    sender = User.objects.filter(userName = senderName).first()
+    if sender:
+        if receiver:
+            pass
+        else:
+            return request_failed(1,"Target user not found" , 404)
