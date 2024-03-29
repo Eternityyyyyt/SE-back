@@ -111,3 +111,27 @@ def user_board(req: HttpRequest, userName:any) :
             return request_failed(1 ,"User not found" , 404)
     else:
         return BAD_METHOD
+
+@CheckRequire
+def search_user(req: HttpRequest, userName:any) :
+    userName = require({"userName": userName}, "userName", "string", err_msg="Bad param [userName]", err_code=-1)
+    pattern_whitelist = r'^[0-9a-zA-Z_]+$'
+    assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+    user = User.objects.filter(userName = userName).first()
+    if req.method == "GET":
+        
+        if user:
+            return_data = {
+                "userData": {
+                    "userName": user.userName,
+                    "nickname": user.nickname,
+                    "phoneNumber": user.phoneNumber,
+                    "email": user.email
+                }
+            }
+            return request_success(return_data)
+        else:
+            return request_failed(1,"User not found" , 404)
+        
+    else:
+        return BAD_METHOD
