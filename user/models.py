@@ -46,8 +46,8 @@ class FriendRequest:
             "request_id": self.request_id,
             "sender": return_field(self.sender),
             "receiver": return_field(self.receiver),
+            "created_time": self.created_time,
             "sendBySearch": self.sendBySearch,
             "requstMessage": self.requstMessage,
-            "created_time": self.created_time,
             "status": self.status
         }

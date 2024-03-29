@@ -172,3 +172,24 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
         
     else:
         return request_failed(1,"Sender not found" , 404)
+    
+@CheckRequire
+def friend_request(req: HttpRequest, userName:any):
+    if req.method != "GET":
+        return BAD_METHOD
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(3,"Can not view other's friend requests", 403)
+    
+    requests = FriendRequest.objects.filter(receiver=userName)
+    return_data = {
+        "info": "Successfully retrieved friend requests",
+        "data": [
+            request.serialize() for request in requests
+        ]
+    }
+    return request_success(return_data)
