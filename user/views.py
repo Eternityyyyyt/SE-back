@@ -40,11 +40,11 @@ def check_require(body):
     phoneNumber = require(body, "phoneNumber", "string", err_msg="Missing or error type of [phoneNumber]")
     email = require(body, "email", "string", err_msg="Missing or error type of [email]")
     
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    
-    assert 0 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
-    assert len(phoneNumber) == 11, "Bad length of [phoneNumber]"
-    assert re.match(pattern, email), "Bad format of [email]"
+    pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern_phoneNumber = r"^\d{11}$"
+    assert 1 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
+    assert re.match(pattern_phoneNumber, phoneNumber), "Bad format of [phoneNumber]"
+    assert re.match(pattern_email, email), "Bad format of [email]"
     return userName, phoneNumber, email
     
 @CheckRequire
