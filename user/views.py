@@ -131,7 +131,6 @@ def search_user(req: HttpRequest, userName:any) :
             }
             return request_success(return_data)
         else:
-            return request_failed(1,"User not found" , 404)
-        
+            return request_failed(1,"User not found" , 404) 
     else:
         return BAD_METHOD
