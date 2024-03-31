@@ -1,4 +1,5 @@
 from utils import utils_time
+from datetime import datetime
 from django.db import models
 from utils.utils_request import return_field
 
@@ -47,7 +48,7 @@ class FriendRequest(models.Model):
             "request_id": self.request_id,
             "sender": self.sender.userName,
             "receiver": self.receiver.userName,
-            "created_time": self.created_time,
+            "created_time": f"{datetime.fromtimestamp(int(self.created_time))}",
             "sendBySearch": self.sendBySearch,
             "requestMessage": self.requestMessage,
             "status": self.status
