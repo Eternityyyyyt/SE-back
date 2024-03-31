@@ -30,7 +30,7 @@ class User(models.Model):
     def __str__(self) -> str:
         return self.userName
 
-class FriendRequest:
+class FriendRequest(models.Model):
     request_id = models.BigAutoField(primary_key=True)
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sender")
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="receiver")
