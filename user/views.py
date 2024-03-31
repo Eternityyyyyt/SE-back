@@ -198,14 +198,15 @@ def friend_request(req: HttpRequest, userName:any):
         body = json.loads(req.body.decode("utf-8"))
         request_id = require(body, "request_id", "int", err_msg="Missing or error type of [request_id]")
         accept = require(body, "accept", "boolean", err_msg="Missing or error type of [accept]")
-        request = FriendRequest.objects.filter(request_id = request_id).first()
-        sender = request.sender
-        if request:
+        friendRequest = FriendRequest.objects.filter(request_id = request_id).first()
+        sender = friendRequest.sender
+        if friendRequest:
             if accept:
-                request.status = 1
+                friendRequest.status = 1
                 receiver.friends.add(sender)
             else:
-                request.status = -1
+                friendRequest.status = -1
+            friendRequest.save()
             return request_success()
         else:
             return request_failed(1,"Not Found" , 404)
