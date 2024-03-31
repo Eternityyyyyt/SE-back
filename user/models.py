@@ -14,6 +14,7 @@ class User(models.Model):
     phoneNumber = models.CharField(max_length=11,default="")
     email = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     nickname = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
+    friends = models.ManyToManyField("self", symmetrical=True)
     class Meta:
         indexes = [models.Index(fields=["userName"])]
         
@@ -48,6 +49,6 @@ class FriendRequest(models.Model):
             "receiver": return_field(self.receiver),
             "created_time": self.created_time,
             "sendBySearch": self.sendBySearch,
-            "requstMessage": self.requstMessage,
+            "requestMessage": self.requestMessage,
             "status": self.status
         }
