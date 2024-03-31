@@ -50,7 +50,13 @@ def require(body, key, type="string", err_msg=None, err_code=-2):
             return val
         except:
             raise KeyError(err_msg, err_code)
-    
+        
+    elif type == "boolean":
+        try:
+            val = bool(val)
+            return val
+        except:
+            raise KeyError(err_msg, err_code)
     elif type == "list":
         try:
             assert isinstance(val, list)
