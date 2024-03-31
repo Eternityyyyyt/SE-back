@@ -35,7 +35,7 @@ class FriendRequest(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sender")
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="receiver")
     sendBySearch = models.BooleanField(default=False)
-    requstMessage = models.CharField(max_length=100,default="")
+    requestMessage = models.CharField(max_length=100,default="")
     created_time = models.FloatField(default=utils_time.get_timestamp)
     status = models.IntegerField(default=0)
     class Meta:
