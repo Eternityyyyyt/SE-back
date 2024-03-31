@@ -45,8 +45,8 @@ class FriendRequest(models.Model):
     def serialize(self):
         return {
             "request_id": self.request_id,
-            "sender": return_field(self.sender),
-            "receiver": return_field(self.receiver),
+            "sender": self.sender.userName,
+            "receiver": self.receiver.userName,
             "created_time": self.created_time,
             "sendBySearch": self.sendBySearch,
             "requestMessage": self.requestMessage,

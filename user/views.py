@@ -174,22 +174,38 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
         return request_failed(1,"Sender not found" , 404)
     
 @CheckRequire
-def friend_request(req: HttpRequest, userName:any):
-    if req.method != "GET":
-        return BAD_METHOD
-    
+def friend_request(req: HttpRequest, userName:any): 
     jwt_token = req.headers.get("Authorization")
     data = check_jwt_token(jwt_token)
+    receiver = User.objects.filter(userName = userName).first()
     if data == None:
         return request_failed(2,"Invalid or expired JWT", 401)
     if userName != data["userName"]:
         return request_failed(3,"Can not view other's friend requests", 403)
+      
+    if req.method == "GET":
+        requests = FriendRequest.objects.filter(receiver=receiver)
+        return_data = {
+            "info": "Successfully retrieved friend requests",
+            "data": [
+                return_field(request.serialize(),["request_id","sender","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
+            ]
+        }
+        return request_success(return_data)
     
-    requests = FriendRequest.objects.filter(receiver=userName)
-    return_data = {
-        "info": "Successfully retrieved friend requests",
-        "data": [
-            request.serialize() for request in requests
-        ]
-    }
-    return request_success(return_data)
+    elif req.method == "POST":
+        receiver = User.objects.filter(userName = userName).first()
+        body = json.loads(req.body.decode("utf-8"))
+        request_id = require(body, "request_id", "int", err_msg="Missing or error type of [request_id]")
+        accept = require(body, "accept", "boolean", err_msg="Missing or error type of [accept]")
+        request = FriendRequest.objects.filter(request_id = request_id).first()
+        sender = request.sender
+        if request:
+            if accept:
+                request.status = 1
+                receiver.friends.add(sender)
+            else:
+                request.status = -1
+            return request_success()
+        else:
+            return request_failed(1,"Not Found" , 404)
