@@ -159,7 +159,7 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
     if sender:
         if receiver:
             if senderName == receiverName:
-                return request_failed(1,"Cannot send friend request to yourself", 400)
+                return request_failed(4,"Cannot send friend request to yourself", 400)
             else:
                 if FriendRequest.objects.filter(sender=sender, receiver=receiver).exists():
                     # TODO: revise to filter whether friendship is created
