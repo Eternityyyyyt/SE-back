@@ -167,6 +167,8 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
                 else:
                     if FriendRequest.objects.filter(sender=sender, receiver=receiver).exists():
                         return request_failed(3,"Friend request already exists", 400)
+                    if FriendRequest.objects.filter(sender=receiver, receiver=sender).exists():
+                        return request_failed(6,"He/she has already sent a friend request to you, please handle it first", 400)
                     else:
                         FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
                         return request_success()
