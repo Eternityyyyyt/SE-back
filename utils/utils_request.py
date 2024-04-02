@@ -1,14 +1,16 @@
 from django.http import JsonResponse
 
 
-def request_failed(info, status_code=400):
+def request_failed(code, info, status_code=400):
     return JsonResponse({
+        "code": code,
         "info": info
     }, status=status_code)
 
 
 def request_success(data={}):
     return JsonResponse({
+        "code": 0,
         "info": "Succeed",
         **data
     })
@@ -23,4 +25,4 @@ def return_field(obj_dict, field_list):
         if k in field_list
     }
 
-BAD_METHOD = request_failed("Bad method", 405)
+BAD_METHOD = request_failed(-3, "Bad method", 405)
