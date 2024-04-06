@@ -165,16 +165,17 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
                 if friends.filter(userName = receiverName):
                     return request_failed(5, "He/She is already your friend", 400)
                 else:
-                    friendRequestToMe = FriendRequest.objects.filter(sender=sender, receiver=receiver).last()
-                    if friendRequestToMe:
-                        if friendRequestToMe.status == 0:
+                    friendRequestToHim = FriendRequest.objects.filter(sender=sender, receiver=receiver).last()
+                    if friendRequestToHim:
+                        if friendRequestToHim.status == 0:
                             return request_failed(3,"Friend request already exists", 400)
                         # else: continue
-                    if FriendRequest.objects.filter(sender=receiver, receiver=sender).exists():
-                        return request_failed(6,"He/she has already sent a friend request to you, please handle it first", 400)
-                    else:
-                        FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
-                        return request_success()
+                    friendRequestToMe = FriendRequest.objects.filter(sender=receiver, receiver=sender).last()
+                    if friendRequestToMe:
+                        if friendRequestToMe.status == 0:
+                            return request_failed(6,"He/she has already sent a friend request to you, please handle it first", 400)
+                    FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
+                    return request_success()
         else:
             return request_failed(1,"Target user not found" , 404)
         
