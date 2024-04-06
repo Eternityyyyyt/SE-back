@@ -9,5 +9,6 @@ urlpatterns = [
     path('searchUser/<userName>',views.search_user),
     path('sendFriendRequest/<receiverName>',views.send_friend_request),
     path('friendRequest/<userName>',views.friend_request),
-    path('friendList/<userName>', views.friend_list)
+    path('friendList/<userName>', views.friend_list),
+    path('friendList/<userName>/<friendName>', views.friend_detail)
 ]

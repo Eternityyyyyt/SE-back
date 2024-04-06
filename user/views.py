@@ -240,3 +240,20 @@ def friend_list(req: HttpRequest, userName: any):
         ]
     }
     return request_success(return_data)
+
+@CheckRequire
+def friend_detail(req: HttpRequest, userName: any, friendName: any):
+    if req.method == "GET":
+        user = User.objects.filter(userName = userName).first()
+        friend = user.friends.filter(userName = friendName).first()
+        if friend == None:
+            return request_failed(1, "Friend Not Found", 404)
+        else:
+            return_data = {
+                "userData":
+                    # TODO: add in friend's tag
+                    return_field(friend.serialize(), ['userName','phoneNumber','email'])
+            }
+            return request_success(return_data)
+    else:
+        return BAD_METHOD
