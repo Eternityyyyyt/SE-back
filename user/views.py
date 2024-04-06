@@ -219,3 +219,24 @@ def friend_request(req: HttpRequest, userName:any):
             return request_success()
         else:
             return request_failed(1,"Not Found" , 404)
+        
+@CheckRequire
+def friend_list(req: HttpRequest, userName: any):
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(3,"Can not view other's friend list", 403)
+    
+    if req.method != 'GET':
+        return BAD_METHOD
+    user = User.objects.filter(userName = userName).first()
+    friends = user.friends.all()
+    sorted_friends = sorted(friends, key=lambda x: x.nickname)
+    return_data = {
+        "friendDataList":[
+            return_field(friend.serialize(),["nickname"]) for friend in sorted_friends
+        ]
+    }
+    return request_success(return_data)
