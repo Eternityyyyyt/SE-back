@@ -53,3 +53,9 @@ class FriendRequest(models.Model):
             "requestMessage": self.requestMessage,
             "status": self.status
         }
+
+class FriendTag(models.Model):
+    tag_id = models.BigAutoField(primary_key=True)
+    tagName = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
+    belongToUser = models.ForeignKey(User, on_delete=models.CASCADE, related_name="belongToUser")
+    inTagUserList = models.ManyToManyField(User, symmetrical=False, related_name="inTagUserList")
