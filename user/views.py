@@ -243,17 +243,26 @@ def friend_list(req: HttpRequest, userName: any):
 
 @CheckRequire
 def friend_detail(req: HttpRequest, userName: any, friendName: any):
+    user = User.objects.filter(userName = userName).first()
+    friend = user.friends.filter(userName = friendName).first()
+    if friend == None:
+        return request_failed(1, "Friend Not Found", 404)
     if req.method == "GET":
-        user = User.objects.filter(userName = userName).first()
-        friend = user.friends.filter(userName = friendName).first()
-        if friend == None:
-            return request_failed(1, "Friend Not Found", 404)
-        else:
-            return_data = {
-                "userData":
-                    # TODO: add in friend's tag
-                    return_field(friend.serialize(), ['userName','phoneNumber','email'])
-            }
-            return request_success(return_data)
+        return_data = {
+            "userData":
+                # TODO: add in friend's tag
+                return_field(friend.serialize(), ['userName','phoneNumber','email'])
+        }
+        return request_success(return_data)
+    elif req.method == "DELETE":
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(3,"Can not delete other's friend", 403)
+        user.friends.remove(friend)
+        user.save()
+        return request_success()
     else:
         return BAD_METHOD
