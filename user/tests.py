@@ -1,5 +1,5 @@
 from django.test import TestCase
-from user.models import User
+from user.models import User,FriendRequest
 from typing import Optional
 import datetime
 import hashlib
@@ -18,6 +18,7 @@ class UserTest(TestCase):
         test_user_name = "testuser"
         testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试" )
         testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2" )
+        testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3" )
         return super().setUp()
     # ! Utility functions
     def generate_jwt_token(self, payload: dict, salt: str):
@@ -177,9 +178,9 @@ class UserTest(TestCase):
         res = self.client.delete("/user/testdeleteuser",data={}, content_type="application/json", **headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'],0)
+
     def test_delete_user_get_not_existing_user(self):
         headers = self.generate_header(username="testuser")
-    
         res = self.client.delete("/user/notexistuser",data={}, content_type="application/json", **headers)
         self.assertEqual(res.status_code , 404)
         self.assertEqual(res.json()['code'],1)
@@ -209,9 +210,10 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 404)
         self.assertEqual(res.json()['code'],1)
     
+
     #Test send friend request
     def test_send_friend_request_success(self):
-        #testuser send a friend request to testuser2
+        #testuser send a friend request to testuser2 
         headers = self.generate_header(username="testuser")
         data = {
             "senderName" :"testuser",
@@ -219,6 +221,181 @@ class UserTest(TestCase):
             "requestMessage": "I'm testuser, fuck you man"
         }
         res = self.client.post("/sendFriendRequest/testuser2",data=data,content_type='application/json',**headers)
-        print(res.json()['code'])
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'],0)
+        self.assertEqual(len(FriendRequest.objects.filter(receiver__userName='testuser2')),1)
+
+    def test_send_friend_request_wrong_jwt(self):
+        #testuser send a friend request to testuser2 with wrong jwt
+        headers = self.generate_header(username="notyou")
+        data = {
+            "senderName" :"testuser",
+            "sendBySearch": True,
+            "requestMessage": "I'm testuser, fuck you man"
+        }
+        res = self.client.post("/sendFriendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'],2)
+
+    def test_send_friend_request_to_not_existing_user(self):
+        #testuser send a friend request to not existing user
+        headers = self.generate_header(username="testuser")
+        data = {
+            "senderName" :"testuser",
+            "sendBySearch": True,
+            "requestMessage": "I'm testuser, fuck you man"
+        }
+        res = self.client.post("/sendFriendRequest/notexistinguser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
+
+    def test_send_friend_request_already_exist(self):
+        #testuser send a friend request to testuser2 again
+        headers = self.generate_header(username="testuser")
+        data = {
+            "senderName" :"testuser",
+            "sendBySearch": True,
+            "requestMessage": "I'm testuser, fuck you man"
+        }
+        res = self.client.post("/sendFriendRequest/testuser2",data=data,content_type='application/json',**headers)
+        data = {
+            "senderName" :"testuser",
+            "sendBySearch": True,
+            "requestMessage": "I'm testuser, fuck you man"
+        }
+        res = self.client.post("/sendFriendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'],3)
+        
+    def test_send_friend_request_to_self(self):
+        #testuser send a friend request to testuser himself
+        headers = self.generate_header(username="testuser")
+        data = {
+            "senderName" :"testuser",
+            "sendBySearch": True,
+            "requestMessage": "I'm testuser, fuck you man"
+        }
+        res = self.client.post("/sendFriendRequest/testuser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'],4)
+    
+    #!Test getting friendRequest list
+    def test_get_friend_request_list_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = self.generate_header(username="testuser2")
+        res = self.client.get("/friendRequest/testuser2",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(len(res.json()['data']),1)
+    def test_get_friend_request_list_of_other(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = self.generate_header(username="testuser")
+        res = self.client.get("/friendRequest/testuser2",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],3)
+    #!Test handling friend request
+    def test_accept_friend_request_list_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        friendRequest = FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = self.generate_header(username="testuser2")
+        data={
+            'request_id': friendRequest.request_id,
+            'accept':True
+        }
+        res = self.client.post("/friendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(testuser.friends.count(),1)
+        self.assertEqual(testuser2.friends.count(),1)
+    def test_refuse_friend_request_list_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        friendRequest = FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = self.generate_header(username="testuser2")
+        data={
+            'request_id': friendRequest.request_id,
+            'accept':False
+        }
+        res = self.client.post("/friendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(testuser.friends.count(),0)
+        self.assertEqual(testuser2.friends.count(),0)
+    def test_refuse_friend_request_list_wrong_jwt(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        friendRequest = FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = {"HTTP_AUTHORIZATION":"sfsfsd"}
+        data={
+            'request_id': friendRequest.request_id,
+            'accept':True
+        }
+        res = self.client.post("/friendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'],2)
+        self.assertEqual(testuser.friends.count(),0)
+    def test_refuse_friend_request_list_request_does_not_exist(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        friendRequest = FriendRequest.objects.create(sender=testuser,receiver=testuser2)
+        headers = self.generate_header(username="testuser2")
+        data={
+            'request_id': friendRequest.request_id+114514,
+            'accept':True
+        }
+        res = self.client.post("/friendRequest/testuser2",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'],-2)
+        self.assertEqual(testuser.friends.count(),0)
+    #!Test getting friend list
+    def test_get_friend_list_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        testuser3 = User.objects.filter(userName = 'testuser3').first()
+        testuser.friends.add(testuser2)
+        testuser.friends.add(testuser3)
+        testuser.save()
+        headers = self.generate_header(username="testuser")
+        res = self.client.get("/friendList/testuser",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(len(res.json()['friendDataList']),2)
+        self.assertEqual(res.json()['friendDataList'][0]['nickname'],'测试2')
+        self.assertEqual(res.json()['friendDataList'][1]['nickname'],'测试3')
+    #!Test getting friend detail info
+    def test_get_friend_detail_info_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        testuser3 = User.objects.filter(userName = 'testuser3').first()
+        testuser.friends.add(testuser2)
+        testuser.friends.add(testuser3)
+        testuser.save()
+        res = self.client.get("/friendList/testuser/testuser2",data={},content_type='application/json')
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(res.json()['userData']['email'],'qwe@qwe.qwe')
+
+    #!Test delete friend
+    def test_delete_friend_success(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        headers = self.generate_header(username="testuser")
+        testuser.friends.add(testuser2)
+        testuser.save()
+        res = self.client.delete("/friendList/testuser/testuser2",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+    def test_delete_friend_not_exist(self):
+        testuser = User.objects.filter(userName='testuser').first()
+        testuser2 = User.objects.filter(userName = 'testuser2').first()
+        headers = self.generate_header(username="testuser")
+        testuser.friends.add(testuser2)
+        testuser.save()
+        res = self.client.delete("/friendList/testuser/notexistfriend",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
