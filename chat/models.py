@@ -17,11 +17,10 @@ class Chat(models.Model):
     memberList = models.ManyToManyField(User, related_name='memberList')
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
     adminList = models.ManyToManyField(User, related_name='adminList')
-    messageList = models.ManyToManyField('Message', related_name='messageList')
     
 class Message(models.Model):
     message_id = models.AutoField(primary_key=True)
-    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='belongToChat')
+    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messageList')
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messageSender')
     created_time = models.FloatField(default=utils_time.get_timestamp)
@@ -37,7 +36,7 @@ class Message(models.Model):
             
 class GroupNotice(models.Model):
     groupNotice_id = models.AutoField(primary_key=True)
-    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='groupNotice')
+    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='noticeList')
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
     
