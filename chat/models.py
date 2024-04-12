@@ -23,10 +23,10 @@ class Message(models.Model):
     message_id = models.AutoField(primary_key=True)
     belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='belongToChat')
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sender')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messageSender')
     created_time = models.FloatField(default=utils_time.get_timestamp)
     visibleToUserList = models.ManyToManyField(User, related_name='visibleToUserList')
-    replying = models.ForeignKey('Message', on_delete=models.CASCADE, related_name='replying', null=True)
+    replying = models.ForeignKey('Message', on_delete=models.CASCADE, related_name='replyingMessages', null=True)
     replidCount = models.BigIntegerField(default=0) 
     
     def default_visible_to_user_list(self):
