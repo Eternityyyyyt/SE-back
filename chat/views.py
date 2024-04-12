@@ -55,5 +55,43 @@ def message(req: HttpRequest):
             "data": 
                 return_field(visible_message.serialze(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
         }
+        return request_success(return_data)
     else:
-        return BAD_METHOD        
+        return BAD_METHOD  
+    
+def create_private(req: HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    createrName = require(body, "createrName", "string", err_msg="Missing or error type of [createrName]")
+    memberName = require(body, "memberName", "string", err_msg="Missing or error type of [memberName]")
+    creater = User.objects.filter(userName=createrName).first()
+    member = User.objects.filter(userName=memberName).first()
+    
+    if not creater:
+        return request_failed(1, "Creater not found", 404)
+    if not member:
+        return request_failed(1, "Member not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    
+    if createrName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    isFriend = creater.friends.filter(userName=memberName).first()
+    if not isFriend:
+        return request_failed(3, f"User {memberName} is not {createrName}'s friend", 403)
+    
+    chat = Chat.objects.create(chatName=f"{createrName} and {memberName}")
+    chat.memberList.add(creater)
+    chat.memberList.add(member)
+    chat.save()
+    
+    return_data = {
+        "data": chat.chat_id
+    }
+    return request_success(return_data)

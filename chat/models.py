@@ -15,7 +15,7 @@ class Chat(models.Model):
     updateTime = models.FloatField(default=utils_time.get_timestamp)
     isGroup = models.BooleanField(default=False)
     memberList = models.ManyToManyField(User, related_name='memberList')
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner', null=True)
     adminList = models.ManyToManyField(User, related_name='adminList')
     
 class Message(models.Model):
