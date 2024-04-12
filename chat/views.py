@@ -56,6 +56,23 @@ def message(req: HttpRequest):
                 return_field(visible_message.serialze(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
         }
         return request_success(return_data)
+    
+    elif req.method == "POST":
+        content = require(body, "content", "string", err_msg="Missing or error type of [content]")
+        replying = require(body, "replying", "int", err_msg="Missing or error type of [replying]")
+        if replying != 0:
+            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replying)
+            message.default_visible_to_user_list()
+            replyMessage = Message.objects.filter(message_id=replying).first()
+            if replyMessage:
+                replyMessage.repliedCount += 1
+                replyMessage.save()
+            message.save()
+        else:
+            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
+            message.default_visible_to_user_list()
+            message.save()
+        return request_success({"data": message.message_id})
     else:
         return BAD_METHOD  
     
