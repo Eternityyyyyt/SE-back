@@ -55,6 +55,5 @@ def message(req: HttpRequest):
             "data": 
                 return_field(visible_message.serialze(), ['message_id', 'content', 'sender', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
         }
-    
     else:
         return BAD_METHOD        
