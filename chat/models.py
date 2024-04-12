@@ -45,7 +45,7 @@ class Message(models.Model):
         return{
             'message_id': self.message_id,
             'content': self.content,
-            'sender': self.sender.nickname,
+            'senderNickname': self.sender.nickname,
             'created_time': self.created_time,
             'replying': replyid,
             'repliedCount': self.repliedCount,

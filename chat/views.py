@@ -53,7 +53,7 @@ def message(req: HttpRequest):
         
         return_data = {
             "data": 
-                return_field(visible_message.serialze(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
+                return_field(visible_message.serialize(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
         }
         return request_success(return_data)
     
@@ -72,7 +72,12 @@ def message(req: HttpRequest):
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
             message.default_visible_to_user_list()
             message.save()
-        return request_success({"data": message.message_id})
+        return_data = {
+            "data": {
+                "message_id": message.message_id
+            }
+        }
+        return request_success(return_data)
     else:
         return BAD_METHOD  
     
