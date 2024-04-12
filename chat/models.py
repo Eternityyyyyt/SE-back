@@ -34,3 +34,10 @@ class Message(models.Model):
         if chat:
             self.visibleToUserList.set(chat.memberList.all())
             self.save()
+            
+class GroupNotice(models.Model):
+    groupNotice_id = models.AutoField(primary_key=True)
+    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='groupNotice')
+    content = models.CharField(max_length=MAX_CHAR_LENGTH)
+    created_time = models.FloatField(default=utils_time.get_timestamp)
+    
