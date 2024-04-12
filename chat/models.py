@@ -17,3 +17,20 @@ class Chat(models.Model):
     memberList = models.ManyToManyField(User, related_name='memberList')
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner')
     adminList = models.ManyToManyField(User, related_name='adminList')
+    messageList = models.ManyToManyField('Message', related_name='messageList')
+    
+class Message(models.Model):
+    message_id = models.AutoField(primary_key=True)
+    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='belongToChat')
+    content = models.CharField(max_length=MAX_CHAR_LENGTH)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sender')
+    created_time = models.FloatField(default=utils_time.get_timestamp)
+    visibleToUserList = models.ManyToManyField(User, related_name='visibleToUserList')
+    replying = models.ForeignKey('Message', on_delete=models.CASCADE, related_name='replying', null=True)
+    replidCount = models.BigIntegerField(default=0) 
+    
+    def default_visible_to_user_list(self):
+        chat = self.belongToChat
+        if chat:
+            self.visibleToUserList.set(chat.memberList.all())
+            self.save()
