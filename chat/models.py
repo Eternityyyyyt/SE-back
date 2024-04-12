@@ -26,13 +26,30 @@ class Message(models.Model):
     created_time = models.FloatField(default=utils_time.get_timestamp)
     visibleToUserList = models.ManyToManyField(User, related_name='visibleToUserList')
     replying = models.ForeignKey('Message', on_delete=models.CASCADE, related_name='replyingMessages', null=True)
-    replidCount = models.BigIntegerField(default=0) 
+    repliedCount = models.BigIntegerField(default=0) 
     
     def default_visible_to_user_list(self):
         chat = self.belongToChat
         if chat:
             self.visibleToUserList.set(chat.memberList.all())
             self.save()
+
+    def serialize(self):
+        replyMessage = self.replying
+        replyid = None
+        if replyMessage:
+            replyChat = replyMessage.belongToChat
+            inChat = replyChat.messageList.filter(message_id = self.message_id).first()
+            if inChat:
+                replyid = replyMessage.message_id
+        return{
+            'message_id': self.message_id,
+            'content': self.content,
+            'sender': self.sender.userName,
+            'created_time': self.created_time,
+            'replying': replyid,
+            'repliedCount': self.repliedCount,
+        }
             
 class GroupNotice(models.Model):
     groupNotice_id = models.AutoField(primary_key=True)
