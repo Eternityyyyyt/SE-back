@@ -53,7 +53,7 @@ def message(req: HttpRequest):
         
         return_data = {
             "data": 
-                return_field(visible_message.serialize(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
+                return_field(visible_message.serialize(), ['chat_id', 'message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
         }
         return request_success(return_data)
     
