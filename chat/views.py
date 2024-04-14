@@ -108,6 +108,17 @@ def create_private(req: HttpRequest):
     if not isFriend:
         return request_failed(3, f"User {memberName} is not {createrName}'s friend", 403)
     
+    possibleChatNames = [f"{createrName} and {memberName}", f"{memberName} and {createrName}"]
+    chat = Chat.objects.filter(chatName__in=possibleChatNames).first()
+    if chat:
+        return_data = {
+            "data":{
+                "chat_id": chat.chat_id,
+                "alreadyCreated": True
+            }
+        }
+        return request_success(return_data)
+    
     chat = Chat.objects.create(chatName=f"{createrName} and {memberName}")
     chat.memberList.add(creater)
     chat.memberList.add(member)
@@ -115,7 +126,8 @@ def create_private(req: HttpRequest):
     
     return_data = {
         "data": {
-            "chat_id": chat.chat_id
+            "chat_id": chat.chat_id,
+            "alreadyCreated": False
         }
     }
     return request_success(return_data)
