@@ -51,9 +51,13 @@ def message(req: HttpRequest):
         if len(visible_messages) > limit:
             visible_messages = visible_messages[:limit]
         
+        returnMessageList = []
+        for visible_message in visible_messages:
+            message = return_field(visible_message.serialize(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount'])
+            message['chat_id'] = chat_id
+            returnMessageList.append(message)
         return_data = {
-            "data": 
-                return_field(visible_message.serialize(), ['chat_id', 'message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount']) for visible_message in visible_messages
+            "data": returnMessageList
         }
         return request_success(return_data)
     

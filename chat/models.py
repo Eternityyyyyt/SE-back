@@ -43,7 +43,6 @@ class Message(models.Model):
             if inChat:
                 replyid = replyMessage.message_id
         return{
-            'chat_id': self.belongToChat.chat_id,
             'message_id': self.message_id,
             'content': self.content,
             'senderNickname': self.sender.nickname,
