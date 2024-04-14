@@ -114,6 +114,8 @@ def create_private(req: HttpRequest):
     chat.save()
     
     return_data = {
-        "data": chat.chat_id
+        "data": {
+            "chat_id": chat.chat_id
+        }
     }
     return request_success(return_data)
