@@ -8,14 +8,26 @@ from utils.utils_request import BAD_METHOD, request_failed, request_success, ret
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
-
+from datetime import timezone,datetime
 @CheckRequire
 def message(req: HttpRequest):
-    body = json.loads(req.body.decode("utf-8"))
+    
     pattern_whitelist = r'^[0-9a-zA-Z_]+$'
-    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
-    assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
-    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    if req.method=="POST":
+        body = json.loads(req.body.decode("utf-8"))
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+        assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+        chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    elif req.method == "GET":
+        try:
+            userName: str = req.GET.get('userName')
+            chat_id: int = req.GET.get('chat_id')
+            after: float = req.GET.get('after', 0)
+            limit: int = int(req.GET.get('limit', '100'))
+        except:
+            return request_failed(-2, "Missing url paraemeter(s): should contain userName and chat_id", 400)
+    else:
+        return BAD_METHOD  
     user = User.objects.filter(userName=userName).first()
     chat = Chat.objects.filter(chat_id=chat_id).first()
     if not user:
@@ -37,8 +49,6 @@ def message(req: HttpRequest):
         return request_failed(3, f"User {userName} is not in chat {chatName}", 404)
 
     if req.method == "GET":
-        after = require(body, "after", "float", err_msg="Missing or error type of [after]")
-        limit = require(body, "limit", "int", err_msg="Missing or error type of [limit]")
         messages = chat.messageList.filter(created_time__gte=after).order_by("-created_time")
         visible_messages = []
         for message in messages:
