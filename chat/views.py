@@ -113,7 +113,7 @@ def create_private(req: HttpRequest):
         return request_failed(3, f"User {memberName} is not {createrName}'s friend", 403)
     
     possibleChatNames = [f"{createrName} and {memberName}", f"{memberName} and {createrName}"]
-    chat = Chat.objects.filter(chatName__in=possibleChatNames).first()
+    chat = Chat.objects.filter(chatName__in=possibleChatNames,isGroup = False).first()
     if chat:
         return_data = {
             "data":{
