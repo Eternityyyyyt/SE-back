@@ -182,17 +182,16 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 401)
         self.assertEqual(res.json()['code'] , 2)
 
-   # def test_get_message_in_private_chat_success(self):
-      #  testuser = User.objects.filter(userName="testuser").first()
-      #  chat = Chat.objects.filter(chat_id = 1).first()
-      #  Message.objects.create(belongToChat=chat, content="a message sent by testuser",sender=testuser)
-      #  headers = self.generate_header(username="testuser")
-      #  data = {
-      #      "userName": "testuser",
-      #      "chat_id": 1,
-      #      "after": 0,
-      #      "limit": 100
-      #  }
-      #  res = self.client.get("/chat/message",data=data, content_type="application/json", **headers)
-      #  self.assertEqual(res.status_code , 200)
-      #  self.assertEqual(res.json()['code'] , 0)
+    def test_get_message_in_private_chat_success(self):
+        testuser = User.objects.filter(userName="testuser").first()
+        chat = Chat.objects.filter(chat_id = 1).first()
+        message = Message.objects.create(belongToChat=chat, content="a message sent by testuser",sender=testuser)
+        message.default_visible_to_user_list()
+        message.save()
+        headers = self.generate_header(username="testuser")
+        url = "/chat/message?userName=testuser&chat_id=1&after=0&limit=100"
+        res = self.client.get(url,data={}, **headers)
+        print(res.json()['info'])
+        print(res.json()['code'])
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
