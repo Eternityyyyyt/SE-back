@@ -18,7 +18,6 @@ def message(req: HttpRequest):
     chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
     user = User.objects.filter(userName=userName).first()
     chat = Chat.objects.filter(chat_id=chat_id).first()
-    
     if not user:
         return request_failed(1, "User not found", 404)
     if not chat:
