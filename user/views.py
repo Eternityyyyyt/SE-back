@@ -165,13 +165,17 @@ def send_friend_request(req: HttpRequest, receiverName:any) :
                 if friends.filter(userName = receiverName):
                     return request_failed(5, "He/She is already your friend", 400)
                 else:
-                    if FriendRequest.objects.filter(sender=sender, receiver=receiver).exists():
-                        return request_failed(3,"Friend request already exists", 400)
-                    if FriendRequest.objects.filter(sender=receiver, receiver=sender).exists():
-                        return request_failed(6,"He/she has already sent a friend request to you, please handle it first", 400)
-                    else:
-                        FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
-                        return request_success()
+                    friendRequestToHim = FriendRequest.objects.filter(sender=sender, receiver=receiver).last()
+                    if friendRequestToHim:
+                        if friendRequestToHim.status == 0:
+                            return request_failed(3,"Friend request already exists", 400)
+                        # else: continue
+                    friendRequestToMe = FriendRequest.objects.filter(sender=receiver, receiver=sender).last()
+                    if friendRequestToMe:
+                        if friendRequestToMe.status == 0:
+                            return request_failed(6,"He/she has already sent a friend request to you, please handle it first", 400)
+                    FriendRequest.objects.create(sender=sender, receiver=receiver, sendBySearch=sendBySearch, requestMessage=requestMessage)
+                    return request_success()
         else:
             return request_failed(1,"Target user not found" , 404)
         
@@ -216,3 +220,50 @@ def friend_request(req: HttpRequest, userName:any):
             return request_success()
         else:
             return request_failed(1,"Not Found" , 404)
+        
+@CheckRequire
+def friend_list(req: HttpRequest, userName: any):
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(3,"Can not view other's friend list", 403)
+    
+    if req.method != 'GET':
+        return BAD_METHOD
+    user = User.objects.filter(userName = userName).first()
+    friends = user.friends.all()
+    sorted_friends = sorted(friends, key=lambda x: x.nickname)
+    return_data = {
+        "friendDataList":[
+            return_field(friend.serialize(),["userName","nickname"]) for friend in sorted_friends
+        ]
+    }
+    return request_success(return_data)
+
+@CheckRequire
+def friend_detail(req: HttpRequest, userName: any, friendName: any):
+    user = User.objects.filter(userName = userName).first()
+    friend = user.friends.filter(userName = friendName).first()
+    if friend == None:
+        return request_failed(1, "Friend Not Found", 404)
+    if req.method == "GET":
+        return_data = {
+            "userData":
+                # TODO: add in friend's tag
+                return_field(friend.serialize(), ['userName','phoneNumber','email'])
+        }
+        return request_success(return_data)
+    elif req.method == "DELETE":
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(3,"Can not delete other's friend", 403)
+        user.friends.remove(friend)
+        user.save()
+        return request_success()
+    else:
+        return BAD_METHOD
