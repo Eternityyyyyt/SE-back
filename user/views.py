@@ -237,7 +237,7 @@ def friend_list(req: HttpRequest, userName: any):
     sorted_friends = sorted(friends, key=lambda x: x.nickname)
     return_data = {
         "friendDataList":[
-            return_field(friend.serialize(),["nickname"]) for friend in sorted_friends
+            return_field(friend.serialize(),["userName","nickname"]) for friend in sorted_friends
         ]
     }
     return request_success(return_data)
