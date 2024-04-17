@@ -63,7 +63,7 @@ class Message(models.Model):
         return{
             'message_id': self.message_id,
             'content': self.content,
-            'senderNickname': self.sender.nickname,
+            'sender': self.sender.userName,
             'created_time': self.created_time,
             'replying': replyid,
             'repliedCount': self.repliedCount,
