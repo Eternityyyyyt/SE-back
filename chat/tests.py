@@ -191,7 +191,46 @@ class UserTest(TestCase):
         headers = self.generate_header(username="testuser")
         url = "/chat/message?userName=testuser&chat_id=1&after=0&limit=100"
         res = self.client.get(url,data={}, **headers)
-        print(res.json()['info'])
-        print(res.json()['code'])
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+    
+    def test_get_chat_info_user_not_exist(self):
+        headers = self.generate_header(username="notexistuser")
+        url = "/chat/chat?chat_id=1&userName=notexistuser"
+        res = self.client.get(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+    
+    def test_get_chat_info_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        url = "/chat/chat?chat_id=1&chat_id=2&userName=testuser"
+        res = self.client.get(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+    
+    def test_get_chat_info_success(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/chat?chat_id=1&userName=testuser"
+        res = self.client.get(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data'][0]['chat_id'],1)
+        self.assertEqual(res.json()['data'][0]['chat_status'],0)
+    
+    def test_get_chat_info_not_exist(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/chat?chat_id=10&userName=testuser"
+        res = self.client.get(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data'][0]['chat_id'],'10')
+        self.assertEqual(res.json()['data'][0]['chat_status'],1)
+        
+    def test_get_chat_info_user_not_in_chat(self):
+        headers = self.generate_header(username="testuser3")
+        url = "/chat/chat?chat_id=1&userName=testuser3"
+        res = self.client.get(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data'][0]['chat_id'],'1')
+        self.assertEqual(res.json()['data'][0]['chat_status'],2)
