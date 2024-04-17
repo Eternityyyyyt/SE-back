@@ -25,7 +25,7 @@ def message(req: HttpRequest):
             after: float = req.GET.get('after', 0)
             limit: int = int(req.GET.get('limit', '100'))
         except:
-            return request_failed(-2, "Missing url paraemeter(s): should contain userName and chat_id", 400)
+            return request_failed(-2, "Missing url parameter(s): should contain userName and chat_id", 400)
     else:
         return BAD_METHOD  
     user = User.objects.filter(userName=userName).first()
@@ -142,5 +142,49 @@ def create_private(req: HttpRequest):
             "chat_id": chat.chat_id,
             "alreadyCreated": False
         }
+    }
+    return request_success(return_data)
+
+def chat_info(req:HttpRequest):
+    if req.method != "GET":
+        return BAD_METHOD
+    try:
+        userName: str = req.GET.get('userName')
+        chat_ids: int = req.GET.getlist('chat_id',[])
+    except:
+        return request_failed(-2, "Missing url parameter(s): should contain userName and chat_id", 400)
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    returnChatList = []
+    for chat_id in chat_ids:
+        chat = Chat.objects.filter(chat_id=chat_id).first()
+        if not chat:
+            chat_status = 1
+            errChat = {}
+            errChat["chat_id"] = chat_id
+            errChat["chat_status"] = chat_status
+            returnChatList.append(errChat)
+        else:
+            inChat = chat.memberList.filter(userName=userName).first()
+            if not inChat:
+                chat_status = 2
+                errChat = {}
+                errChat["chat_id"] = chat_id
+                errChat["chat_status"] = chat_status
+                returnChatList.append(errChat)
+            else:
+                chat_status = 0
+                normalChat = chat.serialize()
+                normalChat["chat_status"] = chat_status
+                returnChatList.append(normalChat)
+    return_data = {
+        "data": returnChatList
     }
     return request_success(return_data)
