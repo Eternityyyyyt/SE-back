@@ -18,6 +18,24 @@ class Chat(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owner', null=True)
     adminList = models.ManyToManyField(User, related_name='adminList')
     
+    def serialize(self):
+        if self.isGroup:
+            return {
+                'chat_id': self.chat_id,
+                'chatName': self.chatName,
+                'isGroup': self.isGroup,
+                'memberList': [user.userName for user in self.memberList.all()],
+                'owner': self.owner.userName,
+                'adminList': [user.userName for user in self.adminList.all()]
+            }
+        else:
+            return {
+                'chat_id': self.chat_id,
+                'chatName': self.chatName,
+                'isGroup': self.isGroup,
+                'memberList': [user.userName for user in self.memberList.all()],
+            }
+    
 class Message(models.Model):
     message_id = models.AutoField(primary_key=True)
     belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messageList')
