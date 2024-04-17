@@ -20,37 +20,43 @@ def message(req: HttpRequest):
         chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
     elif req.method == "GET":
         try:
-            userName: str = req.GET.get('userName')
-            chat_id: int = req.GET.get('chat_id')
-            after: float = req.GET.get('after', 0)
-            limit: int = int(req.GET.get('limit', '100'))
+            userName: str = req.GET.get('userName','')
         except:
             return request_failed(-2, "Missing url parameter(s): should contain userName and chat_id", 400)
+        chat_id: int = req.GET.get('chat_id',0)
+        after: float = req.GET.get('after', 0)
+        limit: int = int(req.GET.get('limit', '100'))
+
     else:
         return BAD_METHOD  
+    
+    if chat_id != 0:
+        chat = Chat.objects.filter(chat_id=chat_id).first()
+        if not chat:
+            return request_failed(1, "Chat not found", 404)
+
     user = User.objects.filter(userName=userName).first()
-    chat = Chat.objects.filter(chat_id=chat_id).first()
     if not user:
         return request_failed(1, "User not found", 404)
-    if not chat:
-        return request_failed(1, "Chat not found", 404)
-    
     jwt_token = req.headers.get("Authorization")
     data = check_jwt_token(jwt_token)
     if data == None:
         return request_failed(2,"Invalid or expired JWT", 401)
     if userName != data["userName"]:
         return request_failed(2,"Invalid request", 401)
-    
-    members = chat.memberList.all()
-    chatName = chat.chatName
-    inMembers = members.filter(userName=userName).first()
-    if not inMembers:
-        return request_failed(3, f"User {userName} is not in chat {chatName}", 404)
-
+    if userName!= '' and chat_id != 0:
+        members = chat.memberList.all()
+        chatName = chat.chatName
+        inMembers = members.filter(userName=userName).first()
+        if not inMembers:
+            return request_failed(3, f"User {userName} is not in chat {chatName}", 404)
     if req.method == "GET":
-        messages = chat.messageList.filter(created_time__gte=after).order_by("-created_time")
+        if chat_id != 0:
+            messages = chat.messageList.filter(created_time__gte=after).order_by("-created_time")
+        else:
+            messages = Message.objects.filter(created_time__gte=after).order_by("-created_time")
         visible_messages = []
+        
         for message in messages:
             visibleList = message.visibleToUserList.all()
             inList = visibleList.filter(userName=userName).first()
@@ -62,8 +68,8 @@ def message(req: HttpRequest):
         
         returnMessageList = []
         for visible_message in visible_messages:
-            message = return_field(visible_message.serialize(), ['message_id', 'content', 'senderNickname', 'created_time', 'replying', 'repliedCount'])
-            message['chat_id'] = chat_id
+            message = return_field(visible_message.serialize(), ['message_id', 'content', 'sender', 'created_time', 'replying', 'repliedCount'])
+            message['chat_id'] = visible_message.belongToChat.chat_id
             returnMessageList.append(message)
         return_data = {
             "data": returnMessageList
