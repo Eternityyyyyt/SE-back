@@ -25,7 +25,7 @@ def message(req: HttpRequest):
             after: float = req.GET.get('after', 0)
             limit: int = int(req.GET.get('limit', '100'))
         except:
-            return request_failed(-2, "Missing url paraemeter(s): should contain userName and chat_id", 400)
+            return request_failed(-2, "Missing url parameter(s): should contain userName and chat_id", 400)
     else:
         return BAD_METHOD  
     user = User.objects.filter(userName=userName).first()
@@ -152,7 +152,7 @@ def chat_info(req:HttpRequest):
         userName: str = req.GET.get('userName')
         chat_ids: int = req.GET.getlist('chat_id',[])
     except:
-        return request_failed(-2, "Missing url paraemeter(s): should contain userName and chat_id", 400)
+        return request_failed(-2, "Missing url parameter(s): should contain userName and chat_id", 400)
     user = User.objects.filter(userName=userName).first()
     if not user:
         return request_failed(1, "User not found", 404)
