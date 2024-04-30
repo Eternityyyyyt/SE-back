@@ -60,11 +60,12 @@ def register(req: HttpRequest):
     assert 0 < len(password) <= MAX_CHAR_LENGTH, "Bad length of [password]"
     assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
     userName, phoneNumber, email = check_require(body)
+    avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
     
     if User.objects.filter(userName=userName).exists():
         return request_failed(1,"User already exists", 401)
     else:
-        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=userName)
+        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=userName, avatar=avatar)
         return request_success()
     
 @CheckRequire
@@ -270,23 +271,3 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
     else:
         return BAD_METHOD
     
-@CheckRequire
-def avatar(req: HttpRequest, userName: any):
-    if req.method != 'POST':
-        return BAD_METHOD
-
-    user = User.objects.filter(userName = userName).first()
-    if user:
-        jwt_token = req.headers.get("Authorization")
-        data = check_jwt_token(jwt_token)
-        if data == None:
-            return request_failed(2,"Invalid or expired JWT", 401)
-        if userName != data["userName"]:
-            return request_failed(3,"Cannot set other's avatar", 403)
-        body = json.loads(req.body.decode("utf-8"))
-        avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
-        user.avatar = avatar
-        user.save()
-        return request_success()
-    else:
-        return request_failed(1,"User not found", 404)
