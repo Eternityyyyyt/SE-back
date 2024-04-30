@@ -16,6 +16,7 @@ class User(models.Model):
     email = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     nickname = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     friends = models.ManyToManyField("self", symmetrical=True)
+    avatar = models.CharField(max_length=MAX_CHAR_LENGTH,default="")
     class Meta:
         indexes = [models.Index(fields=["userName"])]
         
@@ -27,6 +28,7 @@ class User(models.Model):
             "phoneNumber": self.phoneNumber,
             "email": self.email,
             "created_time": self.created_time,
+            "avatar": self.avatar,
         }
     
     def __str__(self) -> str:

@@ -86,7 +86,8 @@ def user_board(req: HttpRequest, userName:any) :
                     "userName": user.userName,
                     "nickname": user.nickname,
                     "phoneNumber": user.phoneNumber,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar,
                 }
             }
             return request_success(return_data)
@@ -267,3 +268,24 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
         return request_success()
     else:
         return BAD_METHOD
+    
+@CheckRequire
+def avatar(req: HttpRequest, userName: any):
+    if req.method != 'POST':
+        return BAD_METHOD
+
+    user = User.objects.filter(userName = userName).first()
+    if user:
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(3,"Cannot set other's avatar", 403)
+        body = json.loads(req.body.decode("utf-8"))
+        avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
+        user.avatar = avatar
+        user.save()
+        return request_success()
+    else:
+        return request_failed(1,"User not found", 404)
