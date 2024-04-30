@@ -64,6 +64,7 @@ class Message(models.Model):
             'message_id': self.message_id,
             'content': self.content,
             'sender': self.sender.userName,
+            'senderAvatar': self.sender.avatar,
             'created_time': self.created_time,
             'replying': replyid,
             'repliedCount': self.repliedCount,

@@ -68,7 +68,7 @@ def message(req: HttpRequest):
         
         returnMessageList = []
         for visible_message in visible_messages:
-            message = return_field(visible_message.serialize(), ['message_id', 'content', 'sender', 'created_time', 'replying', 'repliedCount'])
+            message = return_field(visible_message.serialize(), ['message_id', 'content', 'sender', 'senderAvatar', 'created_time', 'replying', 'repliedCount'])
             message['chat_id'] = visible_message.belongToChat.chat_id
             returnMessageList.append(message)
         return_data = {
