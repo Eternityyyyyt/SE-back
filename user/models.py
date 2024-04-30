@@ -49,7 +49,7 @@ class FriendRequest(models.Model):
         return {
             "request_id": self.request_id,
             "sender": self.sender.userName,
-            "avatar": self.sender.avatar,
+            "senderAvatar": self.sender.avatar,
             "receiver": self.receiver.userName,
             "created_time": f"{datetime.fromtimestamp(int(self.created_time))}",
             "sendBySearch": self.sendBySearch,

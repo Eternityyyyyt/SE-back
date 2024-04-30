@@ -200,7 +200,7 @@ def friend_request(req: HttpRequest, userName:any):
         return_data = {
             "info": "Successfully retrieved friend requests",
             "data": [
-                return_field(request.serialize(),["request_id","sender","avatar","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
+                return_field(request.serialize(),["request_id","sender","senderAvatar","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
             ]
         }
         return request_success(return_data)
