@@ -45,6 +45,7 @@ def check_require(body):
     assert 0 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
     assert 0 < len(nickname) <= MAX_CHAR_LENGTH, "Bad length of [nickname]"
     assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+    assert re.match(pattern_whitelist, nickname), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', nickname)}"
     assert re.match(pattern_phoneNumber, phoneNumber), "Bad format of [phoneNumber]"
     assert re.match(pattern_email, email), "Bad format of [email]"
     return userName, nickname, phoneNumber, email

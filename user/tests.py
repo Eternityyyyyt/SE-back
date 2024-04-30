@@ -100,6 +100,20 @@ class UserTest(TestCase):
         res = self.client.post('/register', data=data, content_type='application/json')
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json()['code'], -2)
+        
+    def test_register_userName_too_long(self):
+        longnickname = "a"*51
+        data = { "userName" : "testwronguser", "nickname":longnickname,"password": "123456" ,"phoneNumber": "12345678901", "email": "qwe@qwe.qwe", "avatar":"/avatar/00.png"}
+        res = self.client.post('/register', data=data, content_type='application/json')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()['code'], -2)
+
+    def test_register_nickname_bad_format_illegal_char(self):
+        wrong_format_nickname = ''.join ([random.choice("qwertyuiopasdfghjklzxcvbnm1234567890_") for _ in range(15)]) + random.choice(";:'<>?/!@#$%^&*()[]【】？，。¥·～")
+        data = { "userName" : "testwronguser", "nickname": wrong_format_nickname,"password": "123456" ,"phoneNumber": "12345678901", "email": "qwe@qwe.qwe", "avatar":"/avatar/00.png"}
+        res = self.client.post('/register', data=data, content_type='application/json')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()['code'], -2)
 
     def test_register_password_too_long(self):
         longpassword= "a"*51
@@ -211,7 +225,7 @@ class UserTest(TestCase):
         self.assertEqual(res.json()['code'],1)
     
 
-    #Test send friend request
+    #!Test send friend request
     def test_send_friend_request_success(self):
         #testuser send a friend request to testuser2 
         headers = self.generate_header(username="testuser")
@@ -399,3 +413,76 @@ class UserTest(TestCase):
         res = self.client.delete("/friendList/testuser/notexistfriend",data={},content_type='application/json',**headers)
         self.assertEqual(res.status_code , 404)
         self.assertEqual(res.json()['code'],1)
+        
+    #!Test revise user info
+    def test_revise_user_info_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "newName": "testnickname",
+            "newPassword": "234567",
+            "oldPassword": "123456",
+            "newPhoneNumber": "12345678910",
+            "newEmail": "qwe@qwe.qwe",
+            "newAvatar": "avatar/1234567890.jpg"
+        }
+        res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        
+    def test_revise_user_info_wrong_password(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "newName": "testnickname",
+            "newPassword": "123456",
+            "oldPassword": "234567",
+            "newPhoneNumber": "12345678910",
+            "newEmail": "qwe@qwe.qwe",
+            "newAvatar": "avatar/1234567890.jpg"
+        }
+        res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],4)
+    
+    def test_revise_user_info_user_not_found(self):
+        headers = self.generate_header(username="testuser11515")
+        data = {
+            "newName": "testnickname",
+            "newPassword": "123456",
+            "oldPassword": "234567",
+            "newPhoneNumber": "12345678910",
+            "newEmail": "qwe@qwe.qwe",
+            "newAvatar": "avatar/1234567890.jpg"
+        }
+        res = self.client.post("/revise/testuser11515",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
+        
+    def test_revise_user_info_invalid_jwt(self):
+        headers = {
+            "HTTP_AUTHORIZATION": "an.illegaljwt"
+        }
+        data = {
+            "newName": "testnickname",
+            "newPassword": "123456",
+            "oldPassword": "234567",
+            "newPhoneNumber": "12345678910",
+            "newEmail": "qwe@qwe.qwe",
+            "newAvatar": "avatar/1234567890.jpg"
+        }
+        res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'],2)
+        
+    def test_revise_user_info_other_user(self):
+        headers = self.generate_header(username="testuser2")
+        data = {
+            "newName": "testnickname",
+            "newPassword": "123456",
+            "oldPassword": "234567",
+            "newPhoneNumber": "12345678910",
+            "newEmail": "qwe@qwe.qwe",
+            "newAvatar": "avatar/1234567890.jpg"
+        }
+        res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],3)
