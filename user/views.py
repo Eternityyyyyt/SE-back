@@ -127,7 +127,8 @@ def search_user(req: HttpRequest, userName:any) :
                     "userName": user.userName,
                     "nickname": user.nickname,
                     "phoneNumber": user.phoneNumber,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar,
                 }
             }
             return request_success(return_data)
@@ -198,7 +199,7 @@ def friend_request(req: HttpRequest, userName:any):
         return_data = {
             "info": "Successfully retrieved friend requests",
             "data": [
-                return_field(request.serialize(),["request_id","sender","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
+                return_field(request.serialize(),["request_id","sender","avatar","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
             ]
         }
         return request_success(return_data)
@@ -238,7 +239,7 @@ def friend_list(req: HttpRequest, userName: any):
     sorted_friends = sorted(friends, key=lambda x: x.nickname)
     return_data = {
         "friendDataList":[
-            return_field(friend.serialize(),["userName","nickname"]) for friend in sorted_friends
+            return_field(friend.serialize(),["userName","nickname","avatar"]) for friend in sorted_friends
         ]
     }
     return request_success(return_data)
@@ -253,7 +254,7 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
         return_data = {
             "userData":
                 # TODO: add in friend's tag
-                return_field(friend.serialize(), ['userName','phoneNumber','email'])
+                return_field(friend.serialize(), ['userName','phoneNumber','email','avatar'])
         }
         return request_success(return_data)
     elif req.method == "DELETE":
