@@ -271,3 +271,47 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
     else:
         return BAD_METHOD
     
+@CheckRequire
+def revise(req: HttpRequest, userName: any):
+    if req.method != 'POST':
+        return BAD_METHOD
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(3,"Can not revise other's information", 403)
+    
+    user = User.objects.filter(userName = userName).first()
+    if user:
+        body = json.loads(req.body.decode("utf-8"))
+        newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+        newPassword = require(body, "newPassword", "string", err_msg="Missing or error type of [newPassword]")
+        oldPassword = require(body, "oldPassword", "string", err_msg="Missing or error type of [oldPassword]")
+        newPhoneNumber = require(body, "newPhoneNumber", "string", err_msg="Missing or error type of [newPhoneNumber]")
+        newEmail = require(body, "newEmail", "string", err_msg="Missing or error type of [newEmail]")
+        newAvatar = require(body, "newAvatar", "string", err_msg="Missing or error type of [newAvatar]")
+        pattern_whitelist = r'^[0-9a-zA-Z_]+$'
+        pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern_phoneNumber = r"^\d{11}$"
+        password = user.password
+        if oldPassword == password:
+            if newName:
+                assert 0 < len(newName) <= MAX_CHAR_LENGTH, "Bad length of [newName]"
+                user.nickname = newName
+            if newPassword:
+                user.password = newPassword
+            if newPhoneNumber:
+                assert re.match(pattern_phoneNumber, newPhoneNumber), "Bad format of [newPhoneNumber]"
+                user.phoneNumber = newPhoneNumber
+            if newEmail:
+                assert re.match(pattern_email, newEmail), "Bad format of [newEmail]"
+                user.email = newEmail
+            if newAvatar:
+                user.avatar = newAvatar
+            user.save()
+            return request_success()
+        else:
+            return request_failed(4,"Wrong password", 403)
+    else:
+        return request_failed(1,"User Not Found", 404)

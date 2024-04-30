@@ -11,4 +11,5 @@ urlpatterns = [
     path('friendRequest/<userName>',views.friend_request),
     path('friendList/<userName>', views.friend_list),
     path('friendList/<userName>/<friendName>', views.friend_detail),
+    path('revise/<userName>', views.revise)
 ]
