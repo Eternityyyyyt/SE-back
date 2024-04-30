@@ -300,6 +300,7 @@ def revise(req: HttpRequest, userName: any):
         if oldPassword == password:
             if newName:
                 assert 0 < len(newName) <= MAX_CHAR_LENGTH, "Bad length of [newName]"
+                assert re.match(pattern_whitelist, newName), f"[newName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', newName)}"
                 user.nickname = newName
             if newPassword:
                 user.password = newPassword
