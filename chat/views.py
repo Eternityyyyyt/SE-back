@@ -3,7 +3,7 @@ import re
 from django.http import HttpRequest, HttpResponse
 
 from user.models import User, FriendRequest
-from chat.models import Chat, Message, GroupNotice
+from chat.models import Chat, Message, GroupNotice, UserReadTimestamp
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
@@ -142,6 +142,11 @@ def create_private(req: HttpRequest):
     chat.memberList.add(creater)
     chat.memberList.add(member)
     chat.save()
+    
+    createrReadTimestamp = UserReadTimestamp.objects.create(user=creater, chat=chat)
+    memberReadTimestamp = UserReadTimestamp.objects.create(user=member, chat=chat)
+    createrReadTimestamp.save()
+    memberReadTimestamp.save()
     
     return_data = {
         "data": {
