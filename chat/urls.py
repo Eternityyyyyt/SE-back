@@ -6,4 +6,5 @@ urlpatterns = [
     path('createPrivate', views.create_private),
     path('chat',views.chat_info),
     path('readMessage',views.read_message),
+    path('messageReadStatus',views.message_read_status),
 ]

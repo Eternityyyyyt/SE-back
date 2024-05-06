@@ -235,3 +235,42 @@ def read_message(req:HttpRequest):
             userReadTimestamp.save()
         
     return request_success()
+
+@CheckRequire
+def message_read_status(req:HttpRequest):
+    if req.method != "GET":
+        return BAD_METHOD
+    
+    userName: str = req.GET.get('userName','')
+    message_id: int = req.GET.get('message_id', '')
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    message = Message.objects.filter(message_id=message_id).first()
+    if not message:
+        return request_failed(1, "Message not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    visibleUser = message.visibleToUserList.all()
+    chat = message.belongToChat
+    
+    alreadyReadUser = []
+    
+    for vuser in visibleUser:
+        userReadTimestamp = UserReadTimestamp.objects.filter(user=vuser, chat=chat).first()
+        if userReadTimestamp.after >= message.created_time:
+            alreadyReadUser.append(vuser.userName)
+    
+    return_data = {
+        "data": alreadyReadUser
+    }
+    
+    return request_success(return_data)
