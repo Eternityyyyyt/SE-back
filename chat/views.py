@@ -52,9 +52,9 @@ def message(req: HttpRequest):
             return request_failed(3, f"User {userName} is not in chat {chatName}", 404)
     if req.method == "GET":
         if chat_id != 0:
-            messages = chat.messageList.filter(created_time__gte=after).order_by("-created_time")
+            messages = chat.messageList.filter(created_time__gt=after).order_by("-created_time")
         else:
-            messages = Message.objects.filter(created_time__gte=after).order_by("-created_time")
+            messages = Message.objects.filter(created_time__gt=after).order_by("-created_time")
         visible_messages = []
         
         for message in messages:
