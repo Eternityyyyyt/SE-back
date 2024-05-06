@@ -80,4 +80,4 @@ class GroupNotice(models.Model):
 class UserReadTimestamp(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='readTimestampList')
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='readTimestampList')
-    readTimestamp = models.FloatField(default=utils_time.get_timestamp)
+    after = models.FloatField(default=utils_time.get_timestamp)

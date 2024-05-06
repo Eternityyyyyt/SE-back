@@ -199,3 +199,39 @@ def chat_info(req:HttpRequest):
         "data": returnChatList
     }
     return request_success(return_data)
+
+@CheckRequire
+def read_message(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    after = require(body, "after", "float", err_msg="Missing or error type of [timestamp]")
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    userReadTimestamp = UserReadTimestamp.objects.filter(user=user, chat=chat).first()
+    if not userReadTimestamp:
+        userReadTimestamp = UserReadTimestamp.objects.create(user=user, chat=chat, after=after)
+        userReadTimestamp.save()
+    else:
+        if after > userReadTimestamp.after:
+            userReadTimestamp.after = after
+            userReadTimestamp.save()
+        
+    return request_success()
