@@ -8,8 +8,16 @@ COPY requirements.txt .
 
 RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
-COPY . .
+# COPY . .
 
-EXPOSE 80
+# EXPOSE 80
 
-CMD ["./start.sh"]
+# CMD ["./start.sh"]
+
+WORKDIR /app
+COPY . /app
+
+RUN python manage.py makemigrations user chat
+RUN python manage.py migrate
+
+CMD ["uvicorn","BACKEND.asgi:application""--host","0.0.0.0","--port","80""--workers","5"]

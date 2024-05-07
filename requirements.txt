@@ -9,3 +9,6 @@ django-cors-headers
 pytest
 pytest-django
 coverage
+channels==4.0.0
+daphne==4.1.0
+uvicorn[standard]
