@@ -12,12 +12,4 @@ python3 manage.py migrate
 #     --max-requests=5000 \
 #     --vacuum
 
-
-# # Uvicorn arguments
-UVICORN_ARGS="--host 0.0.0.0 --port 80 --workers 5"
-
-# # The application to run
-APPLICATION="SE-back.asgi:application"
-
-# # Run Uvicorn with the specified arguments and application
-uvicorn $APPLICATION$UVICORN_ARGS
+uvicorn SE-back.asgi:application --host 0.0.0.0 --port 80 --workers 5
