@@ -36,16 +36,19 @@ def login(req: HttpRequest):
 
 def check_require(body):
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    nickname = require(body, "nickname", "string", err_msg="Missing or error type of [nickname]")
     phoneNumber = require(body, "phoneNumber", "string", err_msg="Missing or error type of [phoneNumber]")
     email = require(body, "email", "string", err_msg="Missing or error type of [email]")
     pattern_whitelist = r'^[0-9a-zA-Z_]+$'
     pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     pattern_phoneNumber = r"^\d{11}$"
     assert 0 < len(userName) <= MAX_CHAR_LENGTH, "Bad length of [userName]"
+    assert 0 < len(nickname) <= MAX_CHAR_LENGTH, "Bad length of [nickname]"
     assert re.match(pattern_whitelist, userName), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', userName)}"
+    assert re.match(pattern_whitelist, nickname), f"[userName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', nickname)}"
     assert re.match(pattern_phoneNumber, phoneNumber), "Bad format of [phoneNumber]"
     assert re.match(pattern_email, email), "Bad format of [email]"
-    return userName, phoneNumber, email
+    return userName, nickname, phoneNumber, email
     
 @CheckRequire
 def register(req: HttpRequest):
@@ -59,12 +62,13 @@ def register(req: HttpRequest):
     pattern_whitelist = r'^[0-9a-zA-Z_]+$'
     assert 0 < len(password) <= MAX_CHAR_LENGTH, "Bad length of [password]"
     assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
-    userName, phoneNumber, email = check_require(body)
+    userName, nickname, phoneNumber, email = check_require(body)
+    avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
     
     if User.objects.filter(userName=userName).exists():
         return request_failed(1,"User already exists", 401)
     else:
-        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=userName)
+        User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=nickname, avatar=avatar)
         return request_success()
     
 @CheckRequire
@@ -86,7 +90,8 @@ def user_board(req: HttpRequest, userName:any) :
                     "userName": user.userName,
                     "nickname": user.nickname,
                     "phoneNumber": user.phoneNumber,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar,
                 }
             }
             return request_success(return_data)
@@ -126,7 +131,8 @@ def search_user(req: HttpRequest, userName:any) :
                     "userName": user.userName,
                     "nickname": user.nickname,
                     "phoneNumber": user.phoneNumber,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar,
                 }
             }
             return request_success(return_data)
@@ -197,7 +203,7 @@ def friend_request(req: HttpRequest, userName:any):
         return_data = {
             "info": "Successfully retrieved friend requests",
             "data": [
-                return_field(request.serialize(),["request_id","sender","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
+                return_field(request.serialize(),["request_id","sender","senderAvatar","receiver","created_time","sendBySearch","requestMessage","status"]) for request in requests
             ]
         }
         return request_success(return_data)
@@ -237,7 +243,7 @@ def friend_list(req: HttpRequest, userName: any):
     sorted_friends = sorted(friends, key=lambda x: x.nickname)
     return_data = {
         "friendDataList":[
-            return_field(friend.serialize(),["userName","nickname"]) for friend in sorted_friends
+            return_field(friend.serialize(),["userName","nickname","avatar"]) for friend in sorted_friends
         ]
     }
     return request_success(return_data)
@@ -252,7 +258,7 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
         return_data = {
             "userData":
                 # TODO: add in friend's tag
-                return_field(friend.serialize(), ['userName','phoneNumber','email'])
+                return_field(friend.serialize(), ['userName','phoneNumber','email','avatar'])
         }
         return request_success(return_data)
     elif req.method == "DELETE":
@@ -267,3 +273,49 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
         return request_success()
     else:
         return BAD_METHOD
+    
+@CheckRequire
+def revise(req: HttpRequest, userName: any):
+    if req.method != 'POST':
+        return BAD_METHOD
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(3,"Can not revise other's information", 403)
+    
+    user = User.objects.filter(userName = userName).first()
+    if user:
+        body = json.loads(req.body.decode("utf-8"))
+        newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+        newPassword = require(body, "newPassword", "string", err_msg="Missing or error type of [newPassword]")
+        oldPassword = require(body, "oldPassword", "string", err_msg="Missing or error type of [oldPassword]")
+        newPhoneNumber = require(body, "newPhoneNumber", "string", err_msg="Missing or error type of [newPhoneNumber]")
+        newEmail = require(body, "newEmail", "string", err_msg="Missing or error type of [newEmail]")
+        newAvatar = require(body, "newAvatar", "string", err_msg="Missing or error type of [newAvatar]")
+        pattern_whitelist = r'^[0-9a-zA-Z_]+$'
+        pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern_phoneNumber = r"^\d{11}$"
+        password = user.password
+        if oldPassword == password:
+            if newName:
+                assert 0 < len(newName) <= MAX_CHAR_LENGTH, "Bad length of [newName]"
+                assert re.match(pattern_whitelist, newName), f"[newName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', newName)}"
+                user.nickname = newName
+            if newPassword:
+                user.password = newPassword
+            if newPhoneNumber:
+                assert re.match(pattern_phoneNumber, newPhoneNumber), "Bad format of [newPhoneNumber]"
+                user.phoneNumber = newPhoneNumber
+            if newEmail:
+                assert re.match(pattern_email, newEmail), "Bad format of [newEmail]"
+                user.email = newEmail
+            if newAvatar:
+                user.avatar = newAvatar
+            user.save()
+            return request_success()
+        else:
+            return request_failed(4,"Wrong password", 403)
+    else:
+        return request_failed(1,"User Not Found", 404)

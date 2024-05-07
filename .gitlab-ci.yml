@@ -20,6 +20,7 @@ unit-test:
   before_script:
     - pip install -r requirements.txt
   script:
+    - python manage.py flush --no-input
     - python manage.py makemigrations user chat
     - python manage.py migrate
     - sh ./test.sh 
