@@ -9,6 +9,8 @@ from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
 from datetime import timezone,datetime
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 @CheckRequire
 def message(req: HttpRequest):
     
@@ -99,6 +101,9 @@ def message(req: HttpRequest):
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
             message.default_visible_to_user_list()
             message.save()
+        channel_layer = get_channel_layer()
+        for member in chat.memberList.all():
+            async_to_sync(channel_layer.group_send)(member.userName, {'type': 'notify'})
         return_data = {
             "data": {
                 "message_id": message.message_id
