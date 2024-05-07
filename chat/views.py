@@ -79,6 +79,14 @@ def message(req: HttpRequest):
     elif req.method == "POST":
         content = require(body, "content", "string", err_msg="Missing or error type of [content]")
         replying = require(body, "replying", "int", err_msg="Missing or error type of [replying]")
+        isGroup = chat.isGroup
+        if not isGroup:
+            memberList = chat.memberList.all()
+            for member in memberList:
+                if member != user:
+                    isFriend = user.friends.filter(userName=member.userName)
+                    if not isFriend:
+                        return request_failed(5, "He/She is not your friend", 405)
         if replying != 0:
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replying)
             message.default_visible_to_user_list()
