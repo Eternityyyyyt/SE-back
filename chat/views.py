@@ -3,12 +3,14 @@ import re
 from django.http import HttpRequest, HttpResponse
 
 from user.models import User, FriendRequest
-from chat.models import Chat, Message, GroupNotice
+from chat.models import Chat, Message, GroupNotice, UserReadTimestamp
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
 from datetime import timezone,datetime
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 @CheckRequire
 def message(req: HttpRequest):
     
@@ -52,9 +54,9 @@ def message(req: HttpRequest):
             return request_failed(3, f"User {userName} is not in chat {chatName}", 404)
     if req.method == "GET":
         if chat_id != 0:
-            messages = chat.messageList.filter(created_time__gte=after).order_by("-created_time")
+            messages = chat.messageList.filter(created_time__gt=after).order_by("-created_time")
         else:
-            messages = Message.objects.filter(created_time__gte=after).order_by("-created_time")
+            messages = Message.objects.filter(created_time__gt=after).order_by("-created_time")
         visible_messages = []
         
         for message in messages:
@@ -68,7 +70,7 @@ def message(req: HttpRequest):
         
         returnMessageList = []
         for visible_message in visible_messages:
-            message = return_field(visible_message.serialize(), ['message_id', 'content', 'sender', 'created_time', 'replying', 'repliedCount'])
+            message = return_field(visible_message.serialize(), ['message_id', 'content', 'sender', 'senderAvatar', 'created_time', 'replying', 'repliedCount'])
             message['chat_id'] = visible_message.belongToChat.chat_id
             returnMessageList.append(message)
         return_data = {
@@ -79,6 +81,14 @@ def message(req: HttpRequest):
     elif req.method == "POST":
         content = require(body, "content", "string", err_msg="Missing or error type of [content]")
         replying = require(body, "replying", "int", err_msg="Missing or error type of [replying]")
+        isGroup = chat.isGroup
+        if not isGroup:
+            memberList = chat.memberList.all()
+            for member in memberList:
+                if member != user:
+                    isFriend = user.friends.filter(userName=member.userName)
+                    if not isFriend:
+                        return request_failed(5, "He/She is not your friend", 405)
         if replying != 0:
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replying)
             message.default_visible_to_user_list()
@@ -91,6 +101,9 @@ def message(req: HttpRequest):
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
             message.default_visible_to_user_list()
             message.save()
+        channel_layer = get_channel_layer()
+        for member in chat.memberList.all():
+            async_to_sync(channel_layer.group_send)(member.userName, {'type': 'notify'})
         return_data = {
             "data": {
                 "message_id": message.message_id
@@ -143,6 +156,11 @@ def create_private(req: HttpRequest):
     chat.memberList.add(member)
     chat.save()
     
+    createrReadTimestamp = UserReadTimestamp.objects.create(user=creater, chat=chat)
+    memberReadTimestamp = UserReadTimestamp.objects.create(user=member, chat=chat)
+    createrReadTimestamp.save()
+    memberReadTimestamp.save()
+    
     return_data = {
         "data": {
             "chat_id": chat.chat_id,
@@ -193,4 +211,79 @@ def chat_info(req:HttpRequest):
     return_data = {
         "data": returnChatList
     }
+    return request_success(return_data)
+
+@CheckRequire
+def read_message(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    after = require(body, "after", "float", err_msg="Missing or error type of [timestamp]")
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    userReadTimestamp = UserReadTimestamp.objects.filter(user=user, chat=chat).first()
+    if not userReadTimestamp:
+        userReadTimestamp = UserReadTimestamp.objects.create(user=user, chat=chat, after=after)
+        userReadTimestamp.save()
+    else:
+        if after > userReadTimestamp.after:
+            userReadTimestamp.after = after
+            userReadTimestamp.save()
+        
+    return request_success()
+
+@CheckRequire
+def message_read_status(req:HttpRequest):
+    if req.method != "GET":
+        return BAD_METHOD
+    
+    userName: str = req.GET.get('userName','')
+    message_id: int = req.GET.get('message_id', '')
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    message = Message.objects.filter(message_id=message_id).first()
+    if not message:
+        return request_failed(1, "Message not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    visibleUser = message.visibleToUserList.all()
+    chat = message.belongToChat
+    
+    alreadyReadUser = []
+    
+    for vuser in visibleUser:
+        userReadTimestamp = UserReadTimestamp.objects.filter(user=vuser, chat=chat).first()
+        if userReadTimestamp.after >= message.created_time:
+            alreadyReadUser.append(vuser.userName)
+    
+    return_data = {
+        "data": alreadyReadUser
+    }
+    
     return request_success(return_data)

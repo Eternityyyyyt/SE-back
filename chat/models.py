@@ -64,6 +64,7 @@ class Message(models.Model):
             'message_id': self.message_id,
             'content': self.content,
             'sender': self.sender.userName,
+            'senderAvatar': self.sender.avatar,
             'created_time': self.created_time,
             'replying': replyid,
             'repliedCount': self.repliedCount,
@@ -75,3 +76,8 @@ class GroupNotice(models.Model):
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
     
+    
+class UserReadTimestamp(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='readTimestampList')
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='readTimestampList')
+    after = models.FloatField(default=utils_time.get_timestamp)
