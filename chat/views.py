@@ -543,7 +543,7 @@ def invite(req:HttpRequest):
         if invitee not in userFriends:
             return request_failed(4, "Cannot invite people who is not your friend", 403)
         if invitee not in members:
-            groupInvitaton = GroupInvitation.objects.create(beLongToChat=chat, invitor=user, invitee=invitee)
+            groupInvitaton = GroupInvitation.objects.create(belongToChat=chat, invitor=user, invitee=invitee)
             groupInvitaton.save()
             
     return request_success()

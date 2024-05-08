@@ -22,9 +22,12 @@ class UserTest(TestCase):
         testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3" )
         testuser4 = User.objects.create(userName="testuser4",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4" )
         testuser5 = User.objects.create(userName="testuser5",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5")
+        testuser6 = User.objects.create(userName="testuser6",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6")
+        testuser7 = User.objects.create(userName="testuser7",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试7")
         testuser.friends.add(testuser2)
         testuser.friends.add(testuser4)
         testuser.friends.add(testuser5)
+        testuser.friends.add(testuser6)
         chat = Chat.objects.create(chatName = "testuser and testuser2")
         chat.memberList.add(testuser2)
         chat.memberList.add(testuser)
@@ -34,6 +37,8 @@ class UserTest(TestCase):
         groupChat.memberList.add(testuser5)
         groupChat.memberList.add(testuser)
         groupChat.adminList.add(testuser2)
+        testuser5.friends.add(testuser6)
+        testuser5.friends.add(testuser3)
         
         return super().setUp()
     # ! Utility functions
@@ -562,6 +567,16 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
         
+    def test_leave_group_wrong_method(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2
+        }
+        res = self.client.delete("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
     def test_leave_group_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
         data = {
@@ -622,6 +637,17 @@ class UserTest(TestCase):
         res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_remove_group_member_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "memberName": "testuser2"
+        }
+        res = self.client.delete("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
         
     def test_remove_group_member_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
@@ -721,3 +747,128 @@ class UserTest(TestCase):
         res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_invite_user_to_group_success(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser3",
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_invite_user_to_group_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser3",
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_invite_user_to_group_user_not_found(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "youknowwho",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser3",
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_invite_user_to_group_chat_not_found(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 100,
+            "inviteeList": [
+                "testuser3",
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_invite_user_to_group_invitee_not_friend(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser3",
+                "testuser6",
+                "testuser7"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_invite_user_to_group_invitee_not_friend(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser3",
+                "testuser6",
+                "testuser7"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_invite_user_to_group_owner_invite(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_invite_user_to_group_user_not_in_group(self):
+        headers = self.generate_header(username="testuser3")
+        data = {
+            "userName": "testuser3",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser6"
+            ]
+        }
+        res = self.client.post("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_invite_user_to_group_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "inviteeList": [
+                "testuser6"
+            ]
+        }
+        res = self.client.delete("/chat/invite", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
