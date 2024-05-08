@@ -287,3 +287,48 @@ def message_read_status(req:HttpRequest):
     }
     
     return request_success(return_data)
+
+@CheckRequire
+def create_group(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    memberList = require(body, "memberList", "list", err_msg="Missing or error type of [memberList]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    members = User.objects.filter(userName__in=memberList)
+    if len(members) < 2:
+        return request_failed(3, "Group member < 3", 400)
+    
+    chatName = userName
+    max_length = MAX_CHAR_LENGTH
+    friends = user.friends.all()
+    for member in members:
+        if len(chatName) + len(member.userName) + 4 > max_length:
+            chatName += "..."
+            break
+        chatName += "," + member.userName
+        if member not in friends:
+            return request_failed(4, "Not friend", 400)
+    
+    chat = Chat.objects.create(chatName=chatName, isGroup=True, owner=user)
+    for member in members:
+        chat.memberList.add(member)
+        
+    chat.save()
+    return_data = {
+        "chat_id": chat.chat_id
+    }
+    return request_success(return_data)
