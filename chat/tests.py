@@ -20,7 +20,11 @@ class UserTest(TestCase):
         testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试" )
         testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2" )
         testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3" )
+        testuser4 = User.objects.create(userName="testuser4",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4" )
+        testuser5 = User.objects.create(userName="testuser5",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5")
         testuser.friends.add(testuser2)
+        testuser.friends.add(testuser4)
+        testuser.friends.add(testuser5)
         chat = Chat.objects.create(chatName = "testuser and testuser2")
         chat.memberList.add(testuser2)
         chat.memberList.add(testuser)
@@ -319,3 +323,71 @@ class UserTest(TestCase):
         res = self.client.get(url, data={}, content_type = "application/json",**headers)
         self.assertEqual(res.status_code , 404)
         self.assertEqual(res.json()['code'] , 1)
+        
+    def test_create_group_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "memberList": [
+                "testuser2",
+                "testuser4",
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+    
+    def test_create_group_wrong_jet(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "testuser",
+            "memberList": [
+                "testuser2",
+                "testuser4",
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_create_group_user_not_exist(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "youknowwho",
+            "memberList": [
+                "testuser2",
+                "testuser4",
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_create_group_member_less_than_3(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "memberList": [
+                "testuser2",
+            ]
+        }
+        res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_create_group_not_friend(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "memberList": [
+                "testuser2",
+                "testuser3",
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'] , 4)
