@@ -11,9 +11,9 @@ RUN pip install "uvicorn[standard]"
 
 # COPY . .
 
-EXPOSE 80
+# EXPOSE 80
 
-CMD ["./start.sh"]
+# CMD ["./start.sh"]
 
 WORKDIR /app
 COPY . /app
