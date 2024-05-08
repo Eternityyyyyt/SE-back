@@ -327,6 +327,7 @@ def create_group(req:HttpRequest):
     for member in members:
         chat.memberList.add(member)
         
+    chat.memberList.add(user)
     chat.save()
     return_data = {
         "chat_id": chat.chat_id
