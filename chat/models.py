@@ -98,7 +98,9 @@ class GroupInvitation(models.Model):
             "invitation_id": self.invitation_id,
             "chat_id": self.belongToChat.chat_id,
             "invitorName": self.invitor.userName,
+            "invitorAvatar": self.invitor.avatar,
             "inviteeName": self.invitee.userName,
+            "inviteeAvatar": self.invitee.avatar,
             "created_time": self.created_time,
             "status": self.status,
         }
