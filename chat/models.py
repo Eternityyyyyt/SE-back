@@ -85,8 +85,8 @@ class UserReadTimestamp(models.Model):
 class GroupInvitation(models.Model):
     invitation_id = models.AutoField(primary_key=True)
     belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='invitationList')
-    inviter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invitationList')
-    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invitationList')
+    invitor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asInvitor')
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asInvitee')
     created_time = models.FloatField(default=utils_time.get_timestamp)
     status = models.IntegerField(default=0)
     
@@ -97,7 +97,7 @@ class GroupInvitation(models.Model):
         return {
             "invitation_id": self.invitation_id,
             "chat_id": self.belongToChat.chat_id,
-            "inviterName": self.inviter.userName,
+            "invitorName": self.invitor.userName,
             "inviteeName": self.invitee.userName,
             "created_time": self.created_time,
             "status": self.status,
