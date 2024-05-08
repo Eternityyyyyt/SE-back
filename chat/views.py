@@ -580,5 +580,42 @@ def group_invitation(req:HttpRequest):
         }
         return request_success(return_data)
     
+    elif req.method == "POST":
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+        invitation_id = require(body, "invitation_id", "int", err_msg="Missing or error type of [invitation_id]")
+        accept = require(body, "accept", "bool", err_msg="Missing or error type of [accept]")
+        
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(2,"Invalid request", 401)
+        
+        user = User.objects.filter(userName=userName).first()
+        if not user:
+            return request_failed(1, "User not found", 404)
+        
+        groupInvitation = GroupInvitation.objects.filter(invitation_id=invitation_id).first()
+        if not groupInvitation:
+            return request_failed(1, "Group invitation not found", 404)
+        
+        chat = groupInvitation.belongToChat
+        if user != chat.owner and user not in chat.adminList.all():
+            return request_failed(3, "Permission denied", 403)
+        
+        if accept:
+            chat.memberList.add(user)
+            chat.save()
+            groupInvitation.status = 1
+            groupInvitation.save()
+            
+        else:
+            groupInvitation.status = -1
+            groupInvitation.save()
+        
+        return request_success()
+    
     else:
         return BAD_METHOD
