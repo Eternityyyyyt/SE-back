@@ -584,7 +584,7 @@ def group_invitation(req:HttpRequest):
         body = json.loads(req.body)
         userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
         invitation_id = require(body, "invitation_id", "int", err_msg="Missing or error type of [invitation_id]")
-        accept = require(body, "accept", "bool", err_msg="Missing or error type of [accept]")
+        accept = require(body, "accept", "boolean", err_msg="Missing or error type of [accept]")
         
         jwt_token = req.headers.get("Authorization")
         data = check_jwt_token(jwt_token)
