@@ -8,4 +8,5 @@ urlpatterns = [
     path('readMessage',views.read_message),
     path('messageReadStatus',views.message_read_status),
     path('createGroup',views.create_group),
+    path('setAdmin',views.set_admin),
 ]

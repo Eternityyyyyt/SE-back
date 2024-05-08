@@ -332,3 +332,42 @@ def create_group(req:HttpRequest):
         "chat_id": chat.chat_id
     }
     return request_success(return_data)
+
+@CheckRequire
+def set_admin(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    ownerName = require(body, "ownerName", "string", err_msg="Missing or error type of [ownerName]")
+    adminList = require(body, "adminList", "list", err_msg="Missing or error type of [adminList]")
+    
+    owner = User.objects.filter(userName=ownerName).first()
+    if not owner:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if ownerName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if chat.owner != owner:
+        return request_failed(3, f"User {ownerName} is not owner of chat {chat_id}", 403)
+    
+    members = chat.memberList.all()
+    admins = User.objects.filter(userName__in=adminList)
+    
+    for admin in admins:
+        if admin not in members:
+            return request_failed(4, f"User {admin.userName} is not member of chat {chat_id}", 403)
+        chat.adminList.add(admin)
+        
+    chat.save()
+    return request_success()
