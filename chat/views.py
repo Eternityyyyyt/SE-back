@@ -3,7 +3,7 @@ import re
 from django.http import HttpRequest, HttpResponse
 
 from user.models import User, FriendRequest
-from chat.models import Chat, Message, GroupNotice, UserReadTimestamp
+from chat.models import Chat, Message, GroupNotice, UserReadTimestamp, GroupInvitation
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
@@ -369,8 +369,7 @@ def set_admin(req:HttpRequest):
         if admin not in members:
             return request_failed(4, f"User {admin.userName} is not member of chat {chat_id}", 403)
         chat.adminList.add(admin)
-        
-    chat.save()
+        chat.save()
     return request_success()
 
 @CheckRequire
@@ -497,3 +496,54 @@ def remove_member(req:HttpRequest):
             return request_success()
     
     return request_failed(4, "Permission denied", 403)
+
+@CheckRequire
+def invite(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    inviteeList = require(body, "inviteeList", "list", err_msg="Missing or error type of [inviteeList]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    invitees = User.objects.filter(userName__in=inviteeList)
+    members = chat.memberList.all()
+    userFriends = user.friends.all()
+    
+    if user == chat.owner or user in chat.adminList.all():
+        for invitee in invitees:
+            if invitee not in userFriends:
+                return request_failed(4, "Cannot invite people who is not your friend", 403)
+            if invitee not in members:
+                chat.memberList.add(invitee)
+                chat.save()
+            
+        return request_success()
+    
+    if user not in members:
+        return request_failed(3, f"User {userName} is not member of chat {chat_id}", 403)
+    
+    for invitee in invitees:
+        if invitee not in userFriends:
+            return request_failed(4, "Cannot invite people who is not your friend", 403)
+        if invitee not in members:
+            groupInvitaton = GroupInvitation.objects.create(beLongToChat=chat, invitor=user, invitee=invitee)
+            groupInvitaton.save()
+            
+    return request_success()
