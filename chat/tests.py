@@ -262,6 +262,17 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
         
+    def test_post_already_read_messages_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 1,
+            "after": utils_time.get_timestamp()
+        }
+        res = self.client.delete("/chat/readMessage",data=data, content_type="application/json", **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
     def test_post_already_read_messages_user_not_exits(self):
         headers = self.generate_header(username="youknowwho")
         data = {
@@ -313,6 +324,13 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
         
+    def test_get_message_read_status_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/messageReadStatus?userName=testuser&message_id=1"
+        res = self.client.post(url, data={}, content_type = "application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
     def test_get_message_read_status_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
         url = "/chat/messageReadStatus?userName=testuser&message_id=1"
@@ -347,8 +365,22 @@ class UserTest(TestCase):
         res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_create_group_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "memberList": [
+                "testuser2",
+                "testuser4",
+                "testuser5"
+            ]
+        }
+        res = self.client.delete("/chat/createGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
     
-    def test_create_group_wrong_jet(self):
+    def test_create_group_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
         data = {
             "userName": "testuser",
@@ -414,6 +446,19 @@ class UserTest(TestCase):
         res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_set_group_admin_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.delete("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
         
     def test_set_group_admin_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
@@ -490,6 +535,17 @@ class UserTest(TestCase):
         res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_change_group_owner_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.delete("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
         
     def test_change_group_owner_wrong_jwt(self):
         headers = self.generate_header(username="youknowwho")
