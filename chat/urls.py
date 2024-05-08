@@ -10,4 +10,5 @@ urlpatterns = [
     path('createGroup',views.create_group),
     path('setAdmin',views.set_admin),
     path('changeOwner',views.change_owner),
+    path('leaveGroup',views.leave_group),
 ]
