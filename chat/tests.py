@@ -974,3 +974,87 @@ class UserTest(TestCase):
         res = self.client.get(url, data={}, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 3)
+        
+    def test_approve_or_deny_group_invitation_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "invitation_id": 1,
+            "accept": True
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_approve_or_deny_group_invitation_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "invitation_id": 1,
+            "accept": True
+        }
+        res = self.client.delete("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
+    def test_approve_or_deny_group_invitation_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "testuser",
+            "invitation_id": 1,
+            "accept": True
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_approve_or_deny_group_invitation_user_not_found(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "youknowwho",
+            "invitation_id": 1,
+            "accept": True
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_approve_or_deny_group_invitation_invitation_not_found(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "invitation_id": 100,
+            "accept": True
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_approve_or_deny_group_invitation_permission_denied(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "invitation_id": 1,
+            "accept": True
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_approve_or_deny_group_invitation_denied(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "invitation_id": 1,
+            "accept": False
+        }
+        res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
