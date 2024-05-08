@@ -472,3 +472,80 @@ class UserTest(TestCase):
         res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 4)
+        
+    def test_change_group_owner_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_change_group_owner_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_change_group_owner_owner_not_exist(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "ownerName": "youknowwho",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_change_group_owner_chat_not_exist(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 100,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_change_group_owner_newOwner_not_exist(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 100,
+            "newOwnerName": "testuser100"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_change_group_owner_not_owner(self):
+        headers = self.generate_header(username="testuser2")
+        data = {
+            "ownerName": "testuser2",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_change_group_owner_not_in_group(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "newOwnerName": "testuser3"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
