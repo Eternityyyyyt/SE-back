@@ -1,6 +1,6 @@
 from django.test import TestCase
 from user.models import User,FriendRequest
-from chat.models import Chat,Message,GroupNotice
+from chat.models import Chat,Message,GroupNotice,GroupInvitation
 from typing import Optional
 import datetime
 import hashlib
@@ -39,6 +39,7 @@ class UserTest(TestCase):
         groupChat.adminList.add(testuser2)
         testuser5.friends.add(testuser6)
         testuser5.friends.add(testuser3)
+        groupInvitation = GroupInvitation.objects.create(belongToChat=groupChat, invitor=testuser5, invitee=testuser6, status=0)
         
         return super().setUp()
     # ! Utility functions
@@ -928,3 +929,48 @@ class UserTest(TestCase):
         res = self.client.delete("/chat/invite", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 405)
         self.assertEqual(res.json()['code'] , -3)
+        
+    def test_get_group_invitation_list_success(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/groupInvitation?userName=testuser&chat_id=2"
+        res = self.client.get(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data'][0]['invitation_id'], 1)
+        self.assertEqual(res.json()['data'][0]['invitorName'], "testuser5")
+        self.assertEqual(res.json()['data'][0]['inviteeName'], "testuser6")
+        
+    def test_get_group_invitation_list_wrong_method(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/groupInvitation?userName=testuser&chat_id=2"
+        res = self.client.delete(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
+    def test_get_group_invitation_list_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        url = "/chat/groupInvitation?userName=testuser&chat_id=2"
+        res = self.client.get(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_get_group_invitation_list_user_not_found(self):
+        headers = self.generate_header(username="youknowwho")
+        url = "/chat/groupInvitation?userName=youknowwho&chat_id=2"
+        res = self.client.get(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_get_group_invitation_list_chat_not_found(self):
+        headers = self.generate_header(username="testuser")
+        url = "/chat/groupInvitation?userName=testuser&chat_id=100"
+        res = self.client.get(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_get_group_invitation_list_not_owner_or_admin(self):
+        headers = self.generate_header(username="testuser5")
+        url = "/chat/groupInvitation?userName=testuser5&chat_id=2"
+        res = self.client.get(url, data={}, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
