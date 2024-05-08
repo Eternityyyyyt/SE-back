@@ -549,3 +549,63 @@ class UserTest(TestCase):
         res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 4)
+        
+    def test_leave_group_success(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_leave_group_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_leave_group_user_not_exist(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "youknowwho",
+            "chat_id": 2
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_leave_group_user_not_exist(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 100
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_leave_group_user_not_in_group(self):
+        headers = self.generate_header(username="testuser3")
+        data = {
+            "userName": "testuser3",
+            "chat_id": 2
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_leave_group_user_is_owner(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2
+        }
+        res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
