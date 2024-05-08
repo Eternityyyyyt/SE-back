@@ -371,3 +371,43 @@ def set_admin(req:HttpRequest):
         
     chat.save()
     return request_success()
+
+@CheckRequire
+def change_owner(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    ownerName = require(body, "ownerName", "string", err_msg="Missing or error type of [ownerName]")
+    newOwnerName = require(body, "newOwnerName", "string", err_msg="Missing or error type of [newOwnerName]")
+    
+    owner = User.objects.filter(userName=ownerName).first()
+    if not owner:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if ownerName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if chat.owner != owner:
+        return request_failed(3, f"User {ownerName} is not owner of chat {chat_id}", 403)
+    
+    members = chat.memberList.all()
+    newOwner = User.objects.filter(userName=newOwnerName).first()
+    if not newOwner:
+        return request_failed(1, "User not found", 404)
+    
+    if newOwner not in members:
+        return request_failed(4, f"User {newOwnerName} is not member of chat {chat_id}", 403)
+    
+    chat.owner = newOwner
+    chat.save()
+    return request_success()
