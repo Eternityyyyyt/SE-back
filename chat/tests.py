@@ -33,6 +33,7 @@ class UserTest(TestCase):
         groupChat.memberList.add(testuser4)
         groupChat.memberList.add(testuser5)
         groupChat.memberList.add(testuser)
+        groupChat.adminList.add(testuser2)
         
         return super().setUp()
     # ! Utility functions
@@ -610,3 +611,113 @@ class UserTest(TestCase):
         res = self.client.post("/chat/leaveGroup", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 4)
+        
+    def test_remove_group_member_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "memberName": "testuser2"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_remove_group_member_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "memberName": "testuser2"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_remove_group_member_user_not_found(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "userName": "youknowwho",
+            "chat_id": 2,
+            "memberName": "testuser2"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_remove_group_member_chat_not_found(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 100,
+            "memberName": "testuser2"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_remove_group_member_member_not_found(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "memberName": "youknowwho"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_remove_group_member_remove_yourself(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser",
+            "chat_id": 2,
+            "memberName": "testuser"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_remove_group_member_member_remove_other(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "memberName": "testuser"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_remove_group_member_member_remove_other(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "memberName": "testuser"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_remove_group_member_admin_remove_owner(self):
+        headers = self.generate_header(username="testuser2")
+        data = {
+            "userName": "testuser2",
+            "chat_id": 2,
+            "memberName": "testuser"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_remove_group_member_admin_remove_member(self):
+        headers = self.generate_header(username="testuser2")
+        data = {
+            "userName": "testuser2",
+            "chat_id": 2,
+            "memberName": "testuser5"
+        }
+        res = self.client.post("/chat/removeMember", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)

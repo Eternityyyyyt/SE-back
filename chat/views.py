@@ -467,7 +467,7 @@ def remove_member(req:HttpRequest):
     
     member = User.objects.filter(userName=memberName).first()
     if not member:
-        return request_failed(2, "Member not found", 404)
+        return request_failed(1, "Member not found", 404)
     
     jwt_token = req.headers.get("Authorization")
     data = check_jwt_token(jwt_token)
