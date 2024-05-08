@@ -21,4 +21,4 @@ COPY . /app
 RUN python manage.py makemigrations user chat
 RUN python manage.py migrate
 
-CMD ["uvicorn","SE-back.asgi:application", "--host","0.0.0.0","--port","80", "--workers","5"]
+CMD ["uvicorn","SE-back.asgi:application", "--host","0.0.0.0","--port","80", "--workers","2"]
