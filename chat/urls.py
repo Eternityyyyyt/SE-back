@@ -11,4 +11,5 @@ urlpatterns = [
     path('setAdmin',views.set_admin),
     path('changeOwner',views.change_owner),
     path('leaveGroup',views.leave_group),
+    path('removeMember', views.remove_member),
 ]

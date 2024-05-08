@@ -446,3 +446,54 @@ def leave_group(req:HttpRequest):
     chat.memberList.remove(user)
     chat.save()
     return request_success()
+
+@CheckRequire
+def remove_member(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    memberName = require(body, "memberName", "string", err_msg="Missing or error type of [memberName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    member = User.objects.filter(userName=memberName).first()
+    if not member:
+        return request_failed(2, "Member not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if user == member:
+        return request_failed(3, "Cannot remove yourself", 403)
+    
+    if user == chat.owner:
+        if member in chat.memberList.all():
+            chat.memberList.remove(member)
+        if member in chat.adminList.all():
+            chat.adminList.remove(member) 
+        chat.save()
+        return request_success()
+    
+    if member == chat.owner or member in chat.adminList.all():
+        return request_failed(4, "Permission denied", 403)
+    
+    if user in chat.adminList.all():
+        if member in chat.memberList.all():
+            chat.memberList.remove(member)
+            chat.save()
+            return request_success()
+    
+    return request_failed(4, "Permission denied", 403)
