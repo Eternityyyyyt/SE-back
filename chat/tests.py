@@ -29,6 +29,9 @@ class UserTest(TestCase):
         chat.memberList.add(testuser2)
         chat.memberList.add(testuser)
         messge = Message.objects.create(belongToChat=chat, content="a message sent by testuser!",sender=testuser)
+        groupChat = Chat.objects.create(chatName = "testuser, testuser4, testuser5", isGroup=True, owner=testuser)
+        groupChat.memberList.add(testuser4)
+        groupChat.memberList.add(testuser5)
         
         return super().setUp()
     # ! Utility functions
@@ -83,7 +86,7 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
         self.assertEqual(res.json()['data']['alreadyCreated'],False)
-        self.assertEqual(res.json()['data']['chat_id'],2)
+        self.assertEqual(res.json()['data']['chat_id'],3)
     def test_create_private_chat_not_friend(self):
         creater = "testuser"
         member = "testuser3"
@@ -154,7 +157,7 @@ class UserTest(TestCase):
         headers = self.generate_header(username=member1)
         data = {
             "userName": member1,
-            "chat_id": 2,
+            "chat_id": 100,
             "content": "Hello, I am your father",
             "replying": 0
         }
@@ -390,4 +393,82 @@ class UserTest(TestCase):
         }
         res = self.client.post("/chat/createGroup", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 400)
+        self.assertEqual(res.json()['code'] , 4)
+        
+    def test_set_group_admin_success(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_set_group_admin_wrong_jwt(self):
+        headers = self.generate_header(username="youknowwho")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_set_group_admin_owner_not_exist(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "youknowwho",
+            "chat_id": 2,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_set_group_admin_chat_not_exist(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 100,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_set_group_admin_not_owner(self):
+        headers = self.generate_header(username="testuser2")
+        data = {
+            "ownerName": "testuser2",
+            "chat_id": 2,
+            "adminList": [
+                "testuser4"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_set_group_admin_not_in_chat(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "adminList": [
+                "testuser3"
+            ]
+        }
+        res = self.client.post("/chat/setAdmin", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 4)
