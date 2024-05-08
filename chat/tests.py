@@ -32,6 +32,7 @@ class UserTest(TestCase):
         groupChat = Chat.objects.create(chatName = "testuser, testuser4, testuser5", isGroup=True, owner=testuser)
         groupChat.memberList.add(testuser4)
         groupChat.memberList.add(testuser5)
+        groupChat.memberList.add(testuser)
         
         return super().setUp()
     # ! Utility functions
