@@ -547,3 +547,38 @@ def invite(req:HttpRequest):
             groupInvitaton.save()
             
     return request_success()
+
+@CheckRequire
+def group_invitation(req:HttpRequest):
+    if req.method == "GET":
+        userName: str = req.GET.get("userName",'')
+        chat_id: int = req.GET.get("chat_id",0)
+        
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(2,"Invalid request", 401)
+        
+        user = User.objects.filter(userName=userName).first()
+        if not user:
+            return request_failed(1, "User not found", 404)
+        
+        chat = Chat.objects.filter(chat_id=chat_id).first()
+        if not chat:
+            return request_failed(1, "Chat not found", 404)
+        
+        if user != chat.owner and user not in chat.adminList.all():
+            return request_failed(3, "Permission denied", 403)
+        
+        groupInvitations = chat.invitationList.all()
+        return_data = {
+            "data": [
+                return_field(groupInvitation.serialize(), ["invitation_id", "invitorName", "invitorAvatar", "inviteeName", "inviteeAvatar", "created_time", "status"]) for groupInvitation in groupInvitations
+            ]
+        }
+        return request_success(return_data)
+    
+    else:
+        return BAD_METHOD
