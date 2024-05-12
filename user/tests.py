@@ -389,6 +389,19 @@ class UserTest(TestCase):
         self.assertEqual(len(res.json()['friendDataList']),2)
         self.assertEqual(res.json()['friendDataList'][0]['nickname'],'测试2')
         self.assertEqual(res.json()['friendDataList'][1]['nickname'],'测试3')
+    
+    def test_get_friend_list_tags_success(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/friendList/testuser4",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(res.json()['friendDataList'][0]['tags'][0],'test')
+        
+    def test_get_friend_list_bad_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.put("/friendList/testuser4",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
     #!Test getting friend detail info
     def test_get_friend_detail_info_success(self):
         testuser = User.objects.filter(userName='testuser').first()
@@ -401,6 +414,19 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'],0)
         self.assertEqual(res.json()['userData']['email'],'qwe@qwe.qwe')
+        
+    def test_get_friend_detail_info_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/friendList/testuser4/testuser5",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(res.json()['userData']['tags'][0],'test')
+        
+    def test_get_friend_detail_info_bad_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.put("/friendList/testuser4/testuser5",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
 
     #!Test delete friend
     def test_delete_friend_success(self):
