@@ -20,7 +20,10 @@ class User(models.Model):
     class Meta:
         indexes = [models.Index(fields=["userName"])]
         
-    def serialize(self):
+    def serialize(self, tagUser):
+        Tags = self.Tags.all()
+        Tags = Tags.filter(belongToUser = tagUser)
+        tags = [tag.tagName for tag in Tags]
         return {
             "id": self.id, 
             "userName": self.userName, 
@@ -29,6 +32,7 @@ class User(models.Model):
             "email": self.email,
             "created_time": self.created_time,
             "avatar": self.avatar,
+            "tags": tags,
         }
     
     def __str__(self) -> str:
