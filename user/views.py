@@ -414,5 +414,25 @@ def friend_tag(req:HttpRequest):
         }
         return request_success(return_data)
     
+    elif req.method == "POST":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+        
+        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if not tag:
+            return request_failed(1,"Tag not found", 404)
+        
+        addList = User.objects.filter(userName__in=friendList)
+        friends = user.friends.all()
+        for people in addList:
+            if people in friends:
+                tag.inTagUserList.add(people)
+            else:
+                return request_failed(4,"Not friend", 403)
+            
+        tag.save()
+        return request_success()
+        
+    
     else:
         return BAD_METHOD
