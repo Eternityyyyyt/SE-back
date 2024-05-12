@@ -364,6 +364,7 @@ def set_admin(req:HttpRequest):
     
     members = chat.memberList.all()
     admins = User.objects.filter(userName__in=adminList)
+    chat.adminList.clear()
     
     for admin in admins:
         if admin not in members:
