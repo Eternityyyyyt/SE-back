@@ -367,3 +367,18 @@ def set_friend_tag(req:HttpRequest):
         tag.delete()
         return request_success()
     
+    elif req.method == "PUT":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+
+        existTag = FriendTag.objects.filter(belongToUser=user, tagName=newName).first()
+        if existTag:
+            return request_failed(3,"Tag already exists", 403)
+        
+        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if not tag:
+            return request_failed(1,"Tag not found", 404)
+        
+        tag.tagName = newName
+        tag.save()
+        return request_success()
