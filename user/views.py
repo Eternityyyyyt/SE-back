@@ -2,7 +2,7 @@ import json
 import re
 from django.http import HttpRequest, HttpResponse
 
-from user.models import User, FriendRequest
+from user.models import User, FriendRequest, FriendTag
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
@@ -319,3 +319,42 @@ def revise(req: HttpRequest, userName: any):
             return request_failed(4,"Wrong password", 403)
     else:
         return request_failed(1,"User Not Found", 404)
+    
+@CheckRequire
+def set_friend_tag(req:HttpRequest):
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1,"User Not Found", 404)
+    
+    if req.method == "POST":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+        
+        existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if existTag:
+            return request_failed(3,"Tag already exists", 403)
+        
+        tag = FriendTag.objects.create(belongToUser=user, tagName=tagName)
+        addList = User.objects.filter(userName__in=friendList)
+        friends = user.friends.all()
+        for people in addList:
+            if people in friends:
+                tag.inTagUserList.add(people)
+            else:
+                return request_failed(4,"Not friend", 403)
+            
+        tag.save()
+        return request_success()
+    
+    else:
+        return BAD_METHOD
