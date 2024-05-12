@@ -433,6 +433,22 @@ def friend_tag(req:HttpRequest):
         tag.save()
         return request_success()
         
+    elif req.method == "DELETE":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+        
+        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if not tag:
+            return request_failed(1,"Tag not found", 404)
+        
+        delList = User.objects.filter(userName__in=friendList)
+        inTagUserList = tag.inTagUserList.all()
+        for people in delList:
+            if people in inTagUserList:
+                tag.inTagUserList.remove(people)
+                
+        tag.save()
+        return request_success()
     
     else:
         return BAD_METHOD
