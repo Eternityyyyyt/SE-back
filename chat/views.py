@@ -409,6 +409,10 @@ def change_owner(req:HttpRequest):
     if newOwner not in members:
         return request_failed(4, f"User {newOwnerName} is not member of chat {chat_id}", 403)
     
+    adminList = chat.adminList.all()
+    if newOwner in adminList:
+        chat.adminList.remove(newOwner)
+        
     chat.owner = newOwner
     chat.save()
     return request_success()

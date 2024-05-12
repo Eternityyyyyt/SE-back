@@ -36,7 +36,7 @@ class UserTest(TestCase):
         groupChat.memberList.add(testuser4)
         groupChat.memberList.add(testuser5)
         groupChat.memberList.add(testuser)
-        groupChat.adminList.add(testuser2)
+        groupChat.adminList.add(testuser4)
         testuser5.friends.add(testuser6)
         testuser5.friends.add(testuser3)
         groupInvitation = GroupInvitation.objects.create(belongToChat=groupChat, invitor=testuser5, invitee=testuser6, status=0)
@@ -614,6 +614,18 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 4)
         
+    def test_change_group_owner_already_admin(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "ownerName": "testuser",
+            "chat_id": 2,
+            "newOwnerName": "testuser4"
+        }
+        res = self.client.post("/chat/changeOwner", data=data, content_type="application/json",**headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
     def test_leave_group_success(self):
         headers = self.generate_header(username="testuser5")
         data = {
@@ -784,9 +796,9 @@ class UserTest(TestCase):
         self.assertEqual(res.json()['code'] , 4)
         
     def test_remove_group_member_admin_remove_owner(self):
-        headers = self.generate_header(username="testuser2")
+        headers = self.generate_header(username="testuser4")
         data = {
-            "userName": "testuser2",
+            "userName": "testuser4",
             "chat_id": 2,
             "memberName": "testuser"
         }
@@ -795,9 +807,9 @@ class UserTest(TestCase):
         self.assertEqual(res.json()['code'] , 4)
         
     def test_remove_group_member_admin_remove_member(self):
-        headers = self.generate_header(username="testuser2")
+        headers = self.generate_header(username="testuser4")
         data = {
-            "userName": "testuser2",
+            "userName": "testuser4",
             "chat_id": 2,
             "memberName": "testuser5"
         }
