@@ -25,6 +25,7 @@ class UserTest(TestCase):
         testuser4.friends.add(testuser5)
         testuser4.friends.add(testuser6)
         tag = FriendTag.objects.create(tagName = "test", belongToUser = testuser4)
+        tag.inTagUserList.add(testuser5)
         tag = FriendTag.objects.create(tagName = "tet", belongToUser = testuser4)
         return super().setUp()
     # ! Utility functions
@@ -617,3 +618,36 @@ class UserTest(TestCase):
         res = self.client.put("/setFriendTag",data=data,content_type='application/json',**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'],3)
+        
+    def test_check_friend_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        url = "/friendTag?userName=testuser4"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        self.assertEqual(res.json()['data'][0]['tag_id'], 1)
+        self.assertEqual(res.json()['data'][0]['tagName'], "test")
+        self.assertEqual(res.json()['data'][0]['inTagUserList'][0], "testuser5")
+        
+    def test_check_friend_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+        }
+        res = self.client.put("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'], -3)
+        
+    def test_check_friend_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        url = "/friendTag?userName=testuser444"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_check_friend_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        url = "/friendTag?userName=testuser4"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
