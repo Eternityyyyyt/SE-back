@@ -359,3 +359,11 @@ def set_friend_tag(req:HttpRequest):
         tag.save()
         return request_success()
     
+    elif req.method == "DELETE":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if not tag:
+            return request_failed(1,"Tag not found", 404)
+        tag.delete()
+        return request_success()
+    
