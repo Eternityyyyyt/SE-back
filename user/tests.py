@@ -25,6 +25,7 @@ class UserTest(TestCase):
         testuser4.friends.add(testuser5)
         testuser4.friends.add(testuser6)
         tag = FriendTag.objects.create(tagName = "test", belongToUser = testuser4)
+        tag = FriendTag.objects.create(tagName = "tet", belongToUser = testuser4)
         return super().setUp()
     # ! Utility functions
     def generate_jwt_token(self, payload: dict, salt: str):
@@ -583,3 +584,36 @@ class UserTest(TestCase):
         res = self.client.delete("/setFriendTag",data=data,content_type='application/json',**headers)
         self.assertEqual(res.status_code , 404)
         self.assertEqual(res.json()['code'],1)
+        
+    def test_revise_friendTag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "test2"
+        }
+        res = self.client.put("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        
+    def test_revise_friendTag_tag_not_exist(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "newName": "test2"
+        }
+        res = self.client.put("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
+        
+    def test_revise_friendTag_rename_exist(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "tet"
+        }
+        res = self.client.put("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],3)
