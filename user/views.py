@@ -243,7 +243,7 @@ def friend_list(req: HttpRequest, userName: any):
     sorted_friends = sorted(friends, key=lambda x: x.nickname)
     return_data = {
         "friendDataList":[
-            return_field(friend.serialize(),["userName","nickname","avatar", "tags"]) for friend in sorted_friends
+            return_field(friend.serialize(user),["userName","nickname","avatar", "tags"]) for friend in sorted_friends
         ]
     }
     return request_success(return_data)
@@ -257,8 +257,7 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
     if req.method == "GET":
         return_data = {
             "userData":
-                # TODO: add in friend's tag
-                return_field(friend.serialize(), ['userName','phoneNumber','email','avatar'])
+                return_field(friend.serialize(user), ['userName','phoneNumber','email','avatar','tags'])
         }
         return request_success(return_data)
     elif req.method == "DELETE":
