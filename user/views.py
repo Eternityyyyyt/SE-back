@@ -322,6 +322,9 @@ def revise(req: HttpRequest, userName: any):
     
 @CheckRequire
 def set_friend_tag(req:HttpRequest):
+    if req.method == "GET":
+        return BAD_METHOD
+    
     body = json.loads(req.body)
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
     
@@ -356,5 +359,3 @@ def set_friend_tag(req:HttpRequest):
         tag.save()
         return request_success()
     
-    else:
-        return BAD_METHOD

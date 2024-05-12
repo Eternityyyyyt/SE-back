@@ -1,5 +1,5 @@
 from django.test import TestCase
-from user.models import User,FriendRequest
+from user.models import User,FriendRequest,FriendTag
 from typing import Optional
 import datetime
 import hashlib
@@ -19,6 +19,12 @@ class UserTest(TestCase):
         testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试", avatar="/avatar/00.png")
         testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2",avatar="/avatar/00.png" )
         testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3",avatar="/avatar/00.png")
+        testuser4 = User.objects.create(userName="testuser4",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4",avatar="/avatar/00.png")
+        testuser5 = User.objects.create(userName="testuser5",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5",avatar="/avatar/00.png")
+        testuser6 = User.objects.create(userName="testuser6",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6",avatar="/avatar/00.png")
+        testuser4.friends.add(testuser5)
+        testuser4.friends.add(testuser6)
+        tag = FriendTag.objects.create(tagName = "test", belongToUser = testuser4)
         return super().setUp()
     # ! Utility functions
     def generate_jwt_token(self, payload: dict, salt: str):
@@ -486,3 +492,74 @@ class UserTest(TestCase):
         res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'],3)
+        
+    def test_create_friendTag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        
+    def test_create_friendTag_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/setFriendTag?userName=testuser4&tagName=tag",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
+        
+    def test_create_friendTag_wrong_jwt_token(self):
+        headers = self.generate_header(username="testuser3")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'],2)
+        
+    def test_create_friendTag_user_not_exist(self):
+        headers = self.generate_header(username="testuser333")
+        data = {
+            "userName": "testuser333",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
+        
+    def test_create_friendTag_tag_exist(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],3)
+        
+    def test_create_friendTag_not_friend(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],4)
