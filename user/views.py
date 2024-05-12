@@ -428,7 +428,7 @@ def friend_tag(req:HttpRequest):
             if people in friends:
                 tag.inTagUserList.add(people)
             else:
-                return request_failed(4,"Not friend", 403)
+                return request_failed(3,"Not friend", 403)
             
         tag.save()
         return request_success()

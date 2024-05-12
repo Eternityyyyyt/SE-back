@@ -651,3 +651,42 @@ class UserTest(TestCase):
         res = self.client.get(url,**headers)
         self.assertEqual(res.status_code , 401)
         self.assertEqual(res.json()['code'], 2)
+        
+    def test_append_tag_list_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":[
+                "testuser6",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_append_tag_list_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList":[
+                "testuser6",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_append_tag_list_not_friend(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":[
+                "testuser",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'], 3)
