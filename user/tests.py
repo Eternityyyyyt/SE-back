@@ -563,3 +563,23 @@ class UserTest(TestCase):
         res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'],4)
+        
+    def test_delete_friendTag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test"
+        }
+        res = self.client.delete("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        
+    def test_delete_friendTag_tag_not_exist(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag"
+        }
+        res = self.client.delete("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
