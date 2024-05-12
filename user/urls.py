@@ -13,4 +13,5 @@ urlpatterns = [
     path('friendList/<userName>/<friendName>', views.friend_detail),
     path('revise/<userName>', views.revise),
     path('setFriendTag', views.set_friend_tag),
+    path('friendTag', views.friend_tag),
 ]

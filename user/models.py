@@ -62,3 +62,11 @@ class FriendTag(models.Model):
     tagName = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
     belongToUser = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendTag")
     inTagUserList = models.ManyToManyField(User, symmetrical=False, related_name="Tags")
+    
+    def serialize(self):
+        return {
+            "tag_id": self.tag_id,
+            "tagName": self.tagName,
+            "belongToUser": self.belongToUser.userName,
+            "inTagUserList": [user.userName for user in self.inTagUserList.all()]
+        }

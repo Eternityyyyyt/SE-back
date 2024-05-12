@@ -382,3 +382,37 @@ def set_friend_tag(req:HttpRequest):
         tag.tagName = newName
         tag.save()
         return request_success()
+    
+    else:
+        return BAD_METHOD
+    
+@CheckRequire
+def friend_tag(req:HttpRequest):
+    if req.method == "GET":
+        userName: str = req.GET.get("userName",'')
+    else:
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401) 
+       
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1,"User not found", 404)
+    
+    if req.method == "GET":
+        tags = FriendTag.objects.filter(belongToUser=user)
+        return_data = {
+            "data": [
+                return_field(tag.serialize(), ['tag_id','tagName','inTagUserList']) for tag in tags
+            ]
+        }
+        return request_success(return_data)
+    
+    else:
+        return BAD_METHOD
