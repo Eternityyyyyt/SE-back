@@ -199,6 +199,48 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 401)
         self.assertEqual(res.json()['code'] , 2)
 
+    def test_post_message_in_private_chat_bad_method(self):
+        member1 = "testuser"
+        member2 = "testuser2"
+        headers = self.generate_header(username=member1)
+        data = {
+            "userName": member1,
+            "chat_id": 1,
+            "content": "Hello, I am your father",
+            "replying": 0
+        }
+        res = self.client.delete("/chat/message",data=data, content_type="application/json", **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+
+    def test_reply_message_in_private_chat_success(self):
+        member1 = "testuser"
+        member2 = "testuser2"
+        headers = self.generate_header(username=member1)
+        data = {
+            "userName": member1,
+            "chat_id": 1,
+            "content": "Hello, I am your father",
+            "replying": 1
+        }
+        res = self.client.post("/chat/message",data=data, content_type="application/json", **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_reply_message_in_private_chat_message_not_found(self):
+        member1 = "testuser"
+        member2 = "testuser2"
+        headers = self.generate_header(username=member1)
+        data = {
+            "userName": member1,
+            "chat_id": 1,
+            "content": "Hello, I am your father",
+            "replying": 100
+        }
+        res = self.client.post("/chat/message",data=data, content_type="application/json", **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+
     def test_get_message_in_private_chat_success(self):
         testuser = User.objects.filter(userName="testuser").first()
         chat = Chat.objects.filter(chat_id = 1).first()

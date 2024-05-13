@@ -91,12 +91,14 @@ def message(req: HttpRequest):
                         return request_failed(5, "He/She is not your friend", 405)
         if replying != 0:
             replyMessage = Message.objects.filter(message_id=replying).first()
-            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replyMessage)
-            message.default_visible_to_user_list()
             if replyMessage:
                 replyMessage.repliedCount += 1
                 replyMessage.save()
-            message.save()
+                message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replyMessage)
+                message.default_visible_to_user_list()
+                message.save()
+            else:
+                return request_failed(1, "reply message not found", 404)
         else:
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
             message.default_visible_to_user_list()
