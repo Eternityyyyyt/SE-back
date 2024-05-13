@@ -469,6 +469,9 @@ def friend_tag(req:HttpRequest):
     
 @CheckRequire
 def friend_tag_delete(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
     body = json.loads(req.body)
     userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
     tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
