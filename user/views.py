@@ -257,7 +257,7 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
     if req.method == "GET":
         return_data = {
             "userData":
-                return_field(friend.serialize(user), ['userName','phoneNumber','email','avatar','tags'])
+                return_field(friend.serialize(user), ['userName','nickname','phoneNumber','email','avatar','tags'])
         }
         return request_success(return_data)
     elif req.method == "DELETE":
