@@ -477,7 +477,7 @@ def friend_tag_delete(req:HttpRequest):
     tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
     friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
     
-    user = User.objects.filter(userName=user).first()
+    user = User.objects.filter(userName=userName).first()
     if not user:
         return request_failed(1,"User not found", 404)
     
