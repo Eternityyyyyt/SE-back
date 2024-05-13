@@ -655,3 +655,52 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'], 3)
         
+    def test_delete_friend_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_delete_friend_tag_BAD_METHOD(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.delete("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'], -3)
+        
+    def test_delete_friend_tag_wrong_jwt(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
+        
+    def test_delete_friend_tag_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_delete_friend_tag_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tagg",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
