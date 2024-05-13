@@ -15,4 +15,5 @@ urlpatterns = [
     path('setFriendTag', views.set_friend_tag),
     path('friendTag', views.friend_tag),
     path('deleteFriendTag', views.delete_friend_tag),
+    path('reviseFriendTag', views.revise_friend_tag),
 ]
