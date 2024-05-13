@@ -356,6 +356,33 @@ def set_friend_tag(req:HttpRequest):
             
     tag.save()
     return request_success()
+
+@CheckRequire
+def delete_friend_tag(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User Not Found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if not existTag:
+        return request_failed(1, "Tag Not Found", 404)
+    
+    existTag.delete()
+    return request_success()
     
 @CheckRequire
 def friend_tag(req:HttpRequest):
