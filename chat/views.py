@@ -610,8 +610,9 @@ def group_invitation(req:HttpRequest):
         if user != chat.owner and user not in chat.adminList.all():
             return request_failed(3, "Permission denied", 403)
         
+        invitee = groupInvitation.invitee
         if accept:
-            chat.memberList.add(user)
+            chat.memberList.add(invitee)
             chat.save()
             groupInvitation.status = 1
             groupInvitation.save()
