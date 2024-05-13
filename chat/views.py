@@ -329,6 +329,11 @@ def create_group(req:HttpRequest):
         
     chat.memberList.add(user)
     chat.save()
+    for member in members:
+        inviteeReadTimestamp = UserReadTimestamp.objects.create(user=member, chat=chat)
+        inviteeReadTimestamp.save()
+    invitorReadTimestamp = UserReadTimestamp.objects.create(user=user, chat=chat)
+    invitorReadTimestamp.save()
     return_data = {
         "chat_id": chat.chat_id
     }
@@ -538,7 +543,8 @@ def invite(req:HttpRequest):
             if invitee not in members:
                 chat.memberList.add(invitee)
                 chat.save()
-            
+                inviteeReadTimestamp =  UserReadTimestamp.objects.create(user=invitee, chat=chat)
+                inviteeReadTimestamp.save()
         return request_success()
     
     if user not in members:
@@ -614,6 +620,8 @@ def group_invitation(req:HttpRequest):
         if accept:
             chat.memberList.add(invitee)
             chat.save()
+            inviteeReadTimestamp = UserReadTimestamp.objects.create(user=invitee, chat=chat)
+            inviteeReadTimestamp.save()
             groupInvitation.status = 1
             groupInvitation.save()
             
