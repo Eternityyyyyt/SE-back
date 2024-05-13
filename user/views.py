@@ -321,7 +321,7 @@ def revise(req: HttpRequest, userName: any):
     
 @CheckRequire
 def set_friend_tag(req:HttpRequest):
-    if req.method == "GET":
+    if req.method != "POST":
         return BAD_METHOD
     
     body = json.loads(req.body)
@@ -338,52 +338,24 @@ def set_friend_tag(req:HttpRequest):
     if not user:
         return request_failed(1,"User Not Found", 404)
     
-    if req.method == "POST":
-        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
-        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
         
-        existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
-        if existTag:
-            return request_failed(3,"Tag already exists", 403)
+    existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if existTag:
+        return request_failed(3,"Tag already exists", 403)
         
-        tag = FriendTag.objects.create(belongToUser=user, tagName=tagName)
-        addList = User.objects.filter(userName__in=friendList)
-        friends = user.friends.all()
-        for people in addList:
-            if people in friends:
-                tag.inTagUserList.add(people)
-            else:
-                return request_failed(4,"Not friend", 403)
+    tag = FriendTag.objects.create(belongToUser=user, tagName=tagName)
+    addList = User.objects.filter(userName__in=friendList)
+    friends = user.friends.all()
+    for people in addList:
+        if people in friends:
+            tag.inTagUserList.add(people)
+        else:
+            return request_failed(4,"Not friend", 403)
             
-        tag.save()
-        return request_success()
-    
-    elif req.method == "DELETE":
-        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
-        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
-        if not tag:
-            return request_failed(1,"Tag not found", 404)
-        tag.delete()
-        return request_success()
-    
-    elif req.method == "PUT":
-        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
-        newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
-
-        existTag = FriendTag.objects.filter(belongToUser=user, tagName=newName).first()
-        if existTag:
-            return request_failed(3,"Tag already exists", 403)
-        
-        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
-        if not tag:
-            return request_failed(1,"Tag not found", 404)
-        
-        tag.tagName = newName
-        tag.save()
-        return request_success()
-    
-    else:
-        return BAD_METHOD
+    tag.save()
+    return request_success()
     
 @CheckRequire
 def friend_tag(req:HttpRequest):
@@ -429,23 +401,6 @@ def friend_tag(req:HttpRequest):
             else:
                 return request_failed(3,"Not friend", 403)
             
-        tag.save()
-        return request_success()
-        
-    elif req.method == "DELETE":
-        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
-        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
-        
-        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
-        if not tag:
-            return request_failed(1,"Tag not found", 404)
-        
-        delList = User.objects.filter(userName__in=friendList)
-        inTagUserList = tag.inTagUserList.all()
-        for people in delList:
-            if people in inTagUserList:
-                tag.inTagUserList.remove(people)
-                
         tag.save()
         return request_success()
     
