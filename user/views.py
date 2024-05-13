@@ -466,3 +466,34 @@ def friend_tag(req:HttpRequest):
     
     else:
         return BAD_METHOD
+    
+@CheckRequire
+def friend_tag_delete(req:HttpRequest):
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+    
+    user = User.objects.filter(userName=user).first()
+    if not user:
+        return request_failed(1,"User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401) 
+    
+    tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if not tag:
+        return request_failed(1,"Tag not found", 404)
+    
+    deleteList = User.objects.filter(userName__in=friendList)
+    inTagUserList = tag.inTagUserList.all()
+    for people in deleteList:
+        if people in inTagUserList:
+            tag.inTagUserList.remove(people)
+    
+    tag.save()
+    return request_success()
