@@ -90,9 +90,9 @@ def message(req: HttpRequest):
                     if not isFriend:
                         return request_failed(5, "He/She is not your friend", 405)
         if replying != 0:
-            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replying)
-            message.default_visible_to_user_list()
             replyMessage = Message.objects.filter(message_id=replying).first()
+            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replyMessage)
+            message.default_visible_to_user_list()
             if replyMessage:
                 replyMessage.repliedCount += 1
                 replyMessage.save()
