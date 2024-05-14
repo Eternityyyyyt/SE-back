@@ -1109,6 +1109,71 @@ class UserTest(TestCase):
             "accept": False
         }
         res = self.client.post("/chat/groupInvitation", data=data, content_type="application/json",**headers)
-        print(res.json()['info'])
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'] , 0)
+        
+    def test_revise_chat_name_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "newName": "tesst"
+        }
+        res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_revise_chat_name_bad_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "newName": "tesst"
+        }
+        res = self.client.delete("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
+    def test_revise_chat_name_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "newName": "tesst"
+        }
+        res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_revise_chat_name_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "chat_id": 2,
+            "newName": "tesst"
+        }
+        res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_revise_chat_name_chat_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2222,
+            "newName": "tesst"
+        }
+        res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_revise_chat_name_not_admin(self):
+        headers = self.generate_header(username="testuser6")
+        data = {
+            "userName": "testuser6",
+            "chat_id": 2,
+            "newName": "tesst"
+        }
+        res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
