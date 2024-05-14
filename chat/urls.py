@@ -14,4 +14,5 @@ urlpatterns = [
     path('removeMember', views.remove_member),
     path('invite', views.invite),
     path('groupInvitation', views.group_invitation),
+    path('chatName', views.chat_name),
 ]

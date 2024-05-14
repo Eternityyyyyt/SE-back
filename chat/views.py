@@ -635,3 +635,37 @@ def group_invitation(req:HttpRequest):
     
     else:
         return BAD_METHOD
+    
+@CheckRequire
+def chat_name(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    owner = chat.owner
+    adminList = chat.adminList.all()
+    if user != owner and user not in adminList:
+        return request_failed(3, "You are not admin of this chat", 403)
+    
+    chat.chatName = newName
+    chat.save()
+    return request_success()
