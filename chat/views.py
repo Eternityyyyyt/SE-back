@@ -285,7 +285,8 @@ def message_read_status(req:HttpRequest):
             alreadyReadUser.append(vuser.userName)
     
     return_data = {
-        "data": alreadyReadUser
+        "data": alreadyReadUser,
+        "repliedCount": message.repliedCount
     }
     
     return request_success(return_data)
