@@ -40,6 +40,7 @@ class UserTest(TestCase):
         testuser5.friends.add(testuser6)
         testuser5.friends.add(testuser3)
         groupInvitation = GroupInvitation.objects.create(belongToChat=groupChat, invitor=testuser5, invitee=testuser6, status=0)
+        groupNotice = GroupNotice.objects.create(belongToChat=groupChat, content="a notice sent by testuser4!")
         
         return super().setUp()
     # ! Utility functions
@@ -1175,5 +1176,72 @@ class UserTest(TestCase):
             "newName": "tesst"
         }
         res = self.client.post("/chat/chatName", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
+        
+    def test_create_group_notice_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "content": "test"
+        }
+        res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data']['groupNotice_id'], 2)
+        
+    def test_create_group_notice_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "content": "test"
+        }
+        res = self.client.delete("/chat/groupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
+    def test_create_group_notice_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "content": "test"
+        }
+        res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_create_group_notice_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "chat_id": 2,
+            "content": "test"
+        }
+        res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_create_group_notice_chat_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 222,
+            "content": "test"
+        }
+        res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_create_group_notice_not_admin(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "content": "test"
+        }
+        res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 3)
