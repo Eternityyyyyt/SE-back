@@ -40,7 +40,7 @@ class UserTest(TestCase):
         testuser5.friends.add(testuser6)
         testuser5.friends.add(testuser3)
         groupInvitation = GroupInvitation.objects.create(belongToChat=groupChat, invitor=testuser5, invitee=testuser6, status=0)
-        groupNotice = GroupNotice.objects.create(belongToChat=groupChat, content="a notice sent by testuser4!")
+        groupNotice = GroupNotice.objects.create(belongToChat=groupChat, content="a notice sent by testuser4!", sender=testuser4)
         
         return super().setUp()
     # ! Utility functions

@@ -703,7 +703,7 @@ def group_notice(req:HttpRequest):
         adminList = chat.adminList.all()
         if user != chat.owner and user not in adminList:
             return request_failed(3, "You are not admin of this chat", 403)
-        groupNotice = GroupNotice.objects.create(belongToChat=chat, content=content)
+        groupNotice = GroupNotice.objects.create(belongToChat=chat, content=content, sender=user)
         groupNotice.save()
         content = "群公告: \n" + content
         groupNoticeMessage = Message.objects.create(belongToChat=chat, content=content, sender=user)
