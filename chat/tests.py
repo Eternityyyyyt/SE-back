@@ -1245,3 +1245,18 @@ class UserTest(TestCase):
         res = self.client.post("/chat/groupNotice", data=data, content_type="application/json",**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 3)
+        
+    def test_get_group_notice_success(self):
+        headers = self.generate_header(username="testuser4")
+        url = "/chat/groupNotice?userName=testuser4&chat_id=2"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        self.assertEqual(res.json()['data'][0]['senderName'], "testuser4")
+    
+    def test_get_group_notice_not_in_chat(self):
+        headers = self.generate_header(username="testuser3")
+        url = "/chat/groupNotice?userName=testuser3&chat_id=2"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
