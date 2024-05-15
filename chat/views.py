@@ -719,3 +719,15 @@ def group_notice(req:HttpRequest):
             }
         }
         return request_success(return_data)
+    
+    elif req.method == "GET":
+        memberList = chat.memberList.all()
+        if user not in memberList:
+            return request_failed(3, "You are not member of this chat", 403)
+        groupNoticeList = GroupNotice.objects.filter(belongToChat=chat).order_by("-createTime")
+        return_data = {
+            "data" : [
+                return_field(groupNotice.serialize(), ['senderName','senderAvatar','createTime','content']) for groupNotice in groupNoticeList
+            ]
+        }
+        return request_success(return_data)
