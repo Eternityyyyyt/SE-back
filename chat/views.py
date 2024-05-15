@@ -670,3 +670,52 @@ def chat_name(req:HttpRequest):
     chat.chatName = newName
     chat.save()
     return request_success()
+
+@CheckRequire
+def group_notice(req:HttpRequest):
+    if req.method == "POST":
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+        chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+        content = require(body, "content", "string", err_msg="Missing or error type of [content]")
+    elif req.method == "GET":
+        userName = req.GET.get("userName",'')
+        chat_id = req.GET.get("chat_id",0)
+    else:
+        return BAD_METHOD
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if req.method == "POST":
+        adminList = chat.adminList.all()
+        if user != chat.owner and user not in adminList:
+            return request_failed(3, "You are not admin of this chat", 403)
+        groupNotice = GroupNotice.objects.create(belongToChat=chat, content=content)
+        groupNotice.save()
+        content = "群公告: \n" + content
+        groupNoticeMessage = Message.objects.create(belongToChat=chat, content=content, sender=user)
+        groupNoticeMessage.default_visible_to_user_list()
+        groupNoticeMessage.save()
+        channel_layer = get_channel_layer()
+        for member in chat.memberList.all():
+            async_to_sync(channel_layer.group_send)(member.userName, {'type': 'notify'})
+        return_data = {
+            "data": {
+                "groupNotice_id": groupNotice.groupNotice_id,
+                "groupNoticeMessage_id": groupNoticeMessage.message_id,
+            }
+        }
+        return request_success(return_data)
