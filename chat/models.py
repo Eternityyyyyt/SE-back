@@ -77,6 +77,14 @@ class GroupNotice(models.Model):
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
     
+    def serialize(self):
+        return {
+            'senderName': self.sender.userName,
+            'senderAvatar': self.sender.avatar,
+            'content': self.content,
+            'created_time': self.created_time,
+        }
+    
     
 class UserReadTimestamp(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='readTimestampList')
