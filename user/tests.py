@@ -1,5 +1,6 @@
 from django.test import TestCase
 from user.models import User,FriendRequest,FriendTag
+from django.contrib.auth.hashers import make_password
 from typing import Optional
 import datetime
 import hashlib
@@ -12,16 +13,16 @@ import random
 # Create your tests here.
 
 from utils.utils_jwt import EXPIRE_IN_SECONDS, SALT, b64url_encode
-
+passw = make_password("123456")
 class UserTest(TestCase):
     def setUp(self) -> None:
         test_user_name = "testuser"
-        testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试", avatar="/avatar/00.png")
-        testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2",avatar="/avatar/00.png" )
-        testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3",avatar="/avatar/00.png")
-        testuser4 = User.objects.create(userName="testuser4",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4",avatar="/avatar/00.png")
-        testuser5 = User.objects.create(userName="testuser5",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5",avatar="/avatar/00.png")
-        testuser6 = User.objects.create(userName="testuser6",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6",avatar="/avatar/00.png")
+        testuser = User.objects.create(userName="testuser",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试", avatar="/avatar/00.png")
+        testuser2 = User.objects.create(userName="testuser2",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2",avatar="/avatar/00.png" )
+        testuser3 = User.objects.create(userName="testuser3",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3",avatar="/avatar/00.png")
+        testuser4 = User.objects.create(userName="testuser4",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4",avatar="/avatar/00.png")
+        testuser5 = User.objects.create(userName="testuser5",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5",avatar="/avatar/00.png")
+        testuser6 = User.objects.create(userName="testuser6",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6",avatar="/avatar/00.png")
         testuser4.friends.add(testuser5)
         testuser4.friends.add(testuser6)
         tag = FriendTag.objects.create(tagName = "test", belongToUser = testuser4)

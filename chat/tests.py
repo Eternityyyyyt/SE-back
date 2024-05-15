@@ -1,6 +1,7 @@
 from django.test import TestCase
 from user.models import User,FriendRequest
 from chat.models import Chat,Message,GroupNotice,GroupInvitation
+from django.contrib.auth.hashers import make_password
 from typing import Optional
 import datetime
 import hashlib
@@ -12,18 +13,18 @@ import random
 from utils import utils_time
 
 from utils.utils_jwt import EXPIRE_IN_SECONDS, SALT, b64url_encode
-
+passw = make_password("123456")
 # Create your tests here.
 class UserTest(TestCase):
     def setUp(self) -> None:
         test_user_name = "testuser"
-        testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试" )
-        testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2" )
-        testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3" )
-        testuser4 = User.objects.create(userName="testuser4",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4" )
-        testuser5 = User.objects.create(userName="testuser5",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5")
-        testuser6 = User.objects.create(userName="testuser6",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6")
-        testuser7 = User.objects.create(userName="testuser7",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试7")
+        testuser = User.objects.create(userName="testuser",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试" )
+        testuser2 = User.objects.create(userName="testuser2",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2" )
+        testuser3 = User.objects.create(userName="testuser3",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3" )
+        testuser4 = User.objects.create(userName="testuser4",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4" )
+        testuser5 = User.objects.create(userName="testuser5",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5")
+        testuser6 = User.objects.create(userName="testuser6",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6")
+        testuser7 = User.objects.create(userName="testuser7",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试7")
         testuser.friends.add(testuser2)
         testuser.friends.add(testuser4)
         testuser.friends.add(testuser5)
