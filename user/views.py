@@ -7,6 +7,7 @@ from utils.utils_request import BAD_METHOD, request_failed, request_success, ret
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
+from django.contrib.auth.hashers import make_password, check_password
 
 @CheckRequire
 def startup(req: HttpRequest):
@@ -27,7 +28,7 @@ def login(req: HttpRequest):
     assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
     if User.objects.filter(userName=userName).exists():
         user = User.objects.filter(userName=userName).first()
-        if user.password == password:
+        if check_password(password, user.password):
             return request_success({"token": generate_jwt_token(userName)})
         else:
             return request_failed(2 ,"Wrong password", 401)
@@ -68,6 +69,7 @@ def register(req: HttpRequest):
     if User.objects.filter(userName=userName).exists():
         return request_failed(1,"User already exists", 401)
     else:
+        password = make_password(password)
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=nickname, avatar=avatar)
         return request_success()
     
@@ -297,13 +299,13 @@ def revise(req: HttpRequest, userName: any):
         pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         pattern_phoneNumber = r"^\d{11}$"
         password = user.password
-        if oldPassword == password:
+        if check_password(oldPassword, password):
             if newName:
                 assert 0 < len(newName) <= MAX_CHAR_LENGTH, "Bad length of [newName]"
                 assert re.match(pattern_whitelist, newName), f"[newName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', newName)}"
                 user.nickname = newName
             if newPassword:
-                user.password = newPassword
+                user.password = make_password(newPassword)
             if newPhoneNumber:
                 assert re.match(pattern_phoneNumber, newPhoneNumber), "Bad format of [newPhoneNumber]"
                 user.phoneNumber = newPhoneNumber
