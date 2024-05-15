@@ -16,4 +16,5 @@ urlpatterns = [
     path('groupInvitation', views.group_invitation),
     path('chatName', views.chat_name),
     path('groupNotice', views.group_notice),
+    path('deleteGroupNotice', views.delete_group_notice),
 ]
