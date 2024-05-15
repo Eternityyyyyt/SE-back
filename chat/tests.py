@@ -1260,3 +1260,80 @@ class UserTest(TestCase):
         res = self.client.get(url,**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'] , 3)
+        
+    def test_delete_group_notice_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "groupNotice_id": 1
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'] , 0)
+        
+    def test_delete_group_notice_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "groupNotice_id": 1
+        }
+        res = self.client.delete("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'] , -3)
+        
+    def test_delete_group_notice_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "groupNotice_id": 1
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'] , 2)
+        
+    def test_delete_group_notice_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "chat_id": 2,
+            "groupNotice_id": 1
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_delete_group_notice_chat_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 222,
+            "groupNotice_id": 1
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_delete_group_notice_notice_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "chat_id": 2,
+            "groupNotice_id": 100
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'] , 1)
+        
+    def test_delete_group_notice_user_not_admin(self):
+        headers = self.generate_header(username="testuser5")
+        data = {
+            "userName": "testuser5",
+            "chat_id": 2,
+            "groupNotice_id": 1
+        }
+        res = self.client.post("/chat/deleteGroupNotice", data=data, content_type="application/json",**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'] , 3)
