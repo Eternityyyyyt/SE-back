@@ -74,3 +74,7 @@ class FriendTag(models.Model):
             "belongToUser": self.belongToUser.userName,
             "inTagUserList": [user.userName for user in self.inTagUserList.all()]
         }
+        
+class History(models.Model):
+    history_id = models.BigAutoField(primary_key=True)
+    userName = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)

@@ -2,7 +2,7 @@ import json
 import re
 from django.http import HttpRequest, HttpResponse
 
-from user.models import User, FriendRequest, FriendTag
+from user.models import User, FriendRequest, FriendTag, History
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
@@ -66,11 +66,12 @@ def register(req: HttpRequest):
     userName, nickname, phoneNumber, email = check_require(body)
     avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
     
-    if User.objects.filter(userName=userName).exists():
+    if User.objects.filter(userName=userName).exists() or History.objects.filter(userName=userName):
         return request_failed(1,"User already exists", 401)
     else:
         password = make_password(password)
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=nickname, avatar=avatar)
+        History.objects.create(userName=userName)
         return request_success()
     
 @CheckRequire
