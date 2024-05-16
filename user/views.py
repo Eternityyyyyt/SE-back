@@ -8,6 +8,7 @@ from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
 from django.contrib.auth.hashers import make_password, check_password
+from chat.models import Chat
 
 @CheckRequire
 def startup(req: HttpRequest):
@@ -111,6 +112,23 @@ def user_board(req: HttpRequest, userName:any) :
             if user.userName != data["userName"]:
                 return request_failed(3, "Cannot delete other users", 403)
             else:
+                chatList = Chat.objects.filter(owner=user,isGroup=True)
+                for chat in chatList:
+                    adminList = chat.adminList.all()
+                    if adminList:
+                        admin = adminList[0]
+                        chat.owner = admin
+                        chat.adminList.remove(admin)
+                        chat.save()
+                    else:
+                        memberList = chat.memberList.all()
+                        if memberList:
+                            member = memberList[0]
+                            if member != user:
+                                chat.owner = member
+                                chat.save()
+                            else:
+                                chat.delete()
                 user.delete()
                 return request_success({
                     "info": "Successfully deleted user"
