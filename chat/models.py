@@ -79,6 +79,7 @@ class GroupNotice(models.Model):
     
     def serialize(self):
         return {
+            'groupNotice_id': self.groupNotice_id,
             'senderName': self.sender.userName,
             'senderAvatar': self.sender.avatar,
             'content': self.content,

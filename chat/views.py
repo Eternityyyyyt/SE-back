@@ -727,7 +727,7 @@ def group_notice(req:HttpRequest):
         groupNoticeList = GroupNotice.objects.filter(belongToChat=chat).order_by("-created_time")
         return_data = {
             "data" : [
-                return_field(groupNotice.serialize(), ['senderName','senderAvatar','content','created_time']) for groupNotice in groupNoticeList
+                return_field(groupNotice.serialize(), ['groupNotice_id','senderName','senderAvatar','content','created_time']) for groupNotice in groupNoticeList
             ]
         }
         return request_success(return_data)
