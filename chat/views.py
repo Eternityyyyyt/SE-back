@@ -89,6 +89,8 @@ def message(req: HttpRequest):
                     isFriend = user.friends.filter(userName=member.userName)
                     if not isFriend:
                         return request_failed(5, "He/She is not your friend", 405)
+            if len(memberList) == 1:
+                return request_failed(5, "You are the only one in this chat", 405)
         if replying != 0:
             replyMessage = Message.objects.filter(message_id=replying).first()
             if replyMessage:
