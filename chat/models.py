@@ -73,11 +73,44 @@ class Message(models.Model):
 class GroupNotice(models.Model):
     groupNotice_id = models.AutoField(primary_key=True)
     belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='noticeList')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='noticeSender', default=None)
     content = models.CharField(max_length=MAX_CHAR_LENGTH)
     created_time = models.FloatField(default=utils_time.get_timestamp)
+    
+    def serialize(self):
+        return {
+            'groupNotice_id': self.groupNotice_id,
+            'senderName': self.sender.userName,
+            'senderAvatar': self.sender.avatar,
+            'content': self.content,
+            'created_time': self.created_time,
+        }
     
     
 class UserReadTimestamp(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='readTimestampList')
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='readTimestampList')
     after = models.FloatField(default=utils_time.get_timestamp)
+    
+class GroupInvitation(models.Model):
+    invitation_id = models.AutoField(primary_key=True)
+    belongToChat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='invitationList')
+    invitor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asInvitor')
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asInvitee')
+    created_time = models.FloatField(default=utils_time.get_timestamp)
+    status = models.IntegerField(default=0)
+    
+    class Meta:
+        indexes = [models.Index(fields=["invitor", "invitee"])]
+        
+    def serialize(self):
+        return {
+            "invitation_id": self.invitation_id,
+            "chat_id": self.belongToChat.chat_id,
+            "invitorName": self.invitor.userName,
+            "invitorAvatar": self.invitor.avatar,
+            "inviteeName": self.invitee.userName,
+            "inviteeAvatar": self.invitee.avatar,
+            "created_time": self.created_time,
+            "status": self.status,
+        }

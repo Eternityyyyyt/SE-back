@@ -2,11 +2,13 @@ import json
 import re
 from django.http import HttpRequest, HttpResponse
 
-from user.models import User, FriendRequest
+from user.models import User, FriendRequest, FriendTag, History
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
+from django.contrib.auth.hashers import make_password, check_password
+from chat.models import Chat
 
 @CheckRequire
 def startup(req: HttpRequest):
@@ -27,7 +29,7 @@ def login(req: HttpRequest):
     assert re.match(pattern_whitelist,password), f"[password] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', password)}"
     if User.objects.filter(userName=userName).exists():
         user = User.objects.filter(userName=userName).first()
-        if user.password == password:
+        if check_password(password, user.password):
             return request_success({"token": generate_jwt_token(userName)})
         else:
             return request_failed(2 ,"Wrong password", 401)
@@ -65,10 +67,12 @@ def register(req: HttpRequest):
     userName, nickname, phoneNumber, email = check_require(body)
     avatar = require(body, "avatar", "string", err_msg="Missing or error type of [avatar]")
     
-    if User.objects.filter(userName=userName).exists():
+    if User.objects.filter(userName=userName).exists() or History.objects.filter(userName=userName):
         return request_failed(1,"User already exists", 401)
     else:
+        password = make_password(password)
         User.objects.create(userName=userName, password=password, phoneNumber=phoneNumber, email=email, nickname=nickname, avatar=avatar)
+        History.objects.create(userName=userName)
         return request_success()
     
 @CheckRequire
@@ -108,6 +112,23 @@ def user_board(req: HttpRequest, userName:any) :
             if user.userName != data["userName"]:
                 return request_failed(3, "Cannot delete other users", 403)
             else:
+                chatList = Chat.objects.filter(owner=user,isGroup=True)
+                for chat in chatList:
+                    adminList = chat.adminList.all()
+                    if adminList:
+                        admin = adminList[0]
+                        chat.owner = admin
+                        chat.adminList.remove(admin)
+                        chat.save()
+                    else:
+                        memberList = chat.memberList.all()
+                        if memberList:
+                            member = memberList[0]
+                            if member != user:
+                                chat.owner = member
+                                chat.save()
+                            else:
+                                chat.delete()
                 user.delete()
                 return request_success({
                     "info": "Successfully deleted user"
@@ -243,7 +264,7 @@ def friend_list(req: HttpRequest, userName: any):
     sorted_friends = sorted(friends, key=lambda x: x.nickname)
     return_data = {
         "friendDataList":[
-            return_field(friend.serialize(),["userName","nickname","avatar"]) for friend in sorted_friends
+            return_field(friend.serialize(user),["userName","nickname","avatar", "tags"]) for friend in sorted_friends
         ]
     }
     return request_success(return_data)
@@ -257,8 +278,7 @@ def friend_detail(req: HttpRequest, userName: any, friendName: any):
     if req.method == "GET":
         return_data = {
             "userData":
-                # TODO: add in friend's tag
-                return_field(friend.serialize(), ['userName','phoneNumber','email','avatar'])
+                return_field(friend.serialize(user), ['userName','nickname','phoneNumber','email','avatar','tags'])
         }
         return request_success(return_data)
     elif req.method == "DELETE":
@@ -298,13 +318,13 @@ def revise(req: HttpRequest, userName: any):
         pattern_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         pattern_phoneNumber = r"^\d{11}$"
         password = user.password
-        if oldPassword == password:
+        if check_password(oldPassword, password):
             if newName:
                 assert 0 < len(newName) <= MAX_CHAR_LENGTH, "Bad length of [newName]"
                 assert re.match(pattern_whitelist, newName), f"[newName] contains illegal character(s):{re.sub(r'[0-9a-zA-Z_]', '', newName)}"
                 user.nickname = newName
             if newPassword:
-                user.password = newPassword
+                user.password = make_password(newPassword)
             if newPhoneNumber:
                 assert re.match(pattern_phoneNumber, newPhoneNumber), "Bad format of [newPhoneNumber]"
                 user.phoneNumber = newPhoneNumber
@@ -319,3 +339,185 @@ def revise(req: HttpRequest, userName: any):
             return request_failed(4,"Wrong password", 403)
     else:
         return request_failed(1,"User Not Found", 404)
+    
+@CheckRequire
+def set_friend_tag(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1,"User Not Found", 404)
+    
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+        
+    existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if existTag:
+        return request_failed(3,"Tag already exists", 403)
+        
+    tag = FriendTag.objects.create(belongToUser=user, tagName=tagName)
+    addList = User.objects.filter(userName__in=friendList)
+    friends = user.friends.all()
+    for people in addList:
+        if people in friends:
+            tag.inTagUserList.add(people)
+        else:
+            return request_failed(4,"Not friend", 403)
+            
+    tag.save()
+    return request_success()
+
+@CheckRequire
+def delete_friend_tag(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User Not Found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    existTag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if not existTag:
+        return request_failed(1, "Tag Not Found", 404)
+    
+    existTag.delete()
+    return request_success()
+
+@CheckRequire
+def revise_friend_tag(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User Not Found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if not tag:
+        return request_failed(1, "Tag Not Found", 404)
+    
+    conflictTag = FriendTag.objects.filter(belongToUser=user, tagName=newName).first()
+    if conflictTag:
+        return request_failed(3, "Tag already exists", 403)
+    
+    tag.tagName = newName
+    tag.save()
+    return request_success()
+    
+@CheckRequire
+def friend_tag(req:HttpRequest):
+    if req.method == "GET":
+        userName: str = req.GET.get("userName",'')
+    else:
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401) 
+       
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1,"User not found", 404)
+    
+    if req.method == "GET":
+        tags = FriendTag.objects.filter(belongToUser=user)
+        return_data = {
+            "data": [
+                return_field(tag.serialize(), ['tag_id','tagName','inTagUserList']) for tag in tags
+            ]
+        }
+        return request_success(return_data)
+    
+    elif req.method == "POST":
+        tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+        friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+        
+        tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+        if not tag:
+            return request_failed(1,"Tag not found", 404)
+        
+        addList = User.objects.filter(userName__in=friendList)
+        friends = user.friends.all()
+        for people in addList:
+            if people in friends:
+                tag.inTagUserList.add(people)
+            else:
+                return request_failed(3,"Not friend", 403)
+            
+        tag.save()
+        return request_success()
+    
+    else:
+        return BAD_METHOD
+    
+@CheckRequire
+def friend_tag_delete(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    tagName = require(body, "tagName", "string", err_msg="Missing or error type of [tagName]")
+    friendList = require(body, "friendList", "list", err_msg="Missing or error type of [friendList]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1,"User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401) 
+    
+    tag = FriendTag.objects.filter(belongToUser=user, tagName=tagName).first()
+    if not tag:
+        return request_failed(1,"Tag not found", 404)
+    
+    deleteList = User.objects.filter(userName__in=friendList)
+    inTagUserList = tag.inTagUserList.all()
+    for people in deleteList:
+        if people in inTagUserList:
+            tag.inTagUserList.remove(people)
+    
+    tag.save()
+    return request_success()

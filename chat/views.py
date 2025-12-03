@@ -3,12 +3,14 @@ import re
 from django.http import HttpRequest, HttpResponse
 
 from user.models import User, FriendRequest
-from chat.models import Chat, Message, GroupNotice, UserReadTimestamp
+from chat.models import Chat, Message, GroupNotice, UserReadTimestamp, GroupInvitation
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_time import get_timestamp
 from utils.utils_jwt import generate_jwt_token, check_jwt_token
 from datetime import timezone,datetime
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 @CheckRequire
 def message(req: HttpRequest):
     
@@ -87,18 +89,25 @@ def message(req: HttpRequest):
                     isFriend = user.friends.filter(userName=member.userName)
                     if not isFriend:
                         return request_failed(5, "He/She is not your friend", 405)
+            if len(memberList) == 1:
+                return request_failed(5, "You are the only one in this chat", 405)
         if replying != 0:
-            message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replying)
-            message.default_visible_to_user_list()
             replyMessage = Message.objects.filter(message_id=replying).first()
             if replyMessage:
                 replyMessage.repliedCount += 1
                 replyMessage.save()
-            message.save()
+                message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp(), replying=replyMessage)
+                message.default_visible_to_user_list()
+                message.save()
+            else:
+                return request_failed(1, "reply message not found", 404)
         else:
             message = Message.objects.create(content=content, sender=user, belongToChat=chat, created_time=get_timestamp())
             message.default_visible_to_user_list()
             message.save()
+        channel_layer = get_channel_layer()
+        for member in chat.memberList.all():
+            async_to_sync(channel_layer.group_send)(member.userName, {'type': 'notify'})
         return_data = {
             "data": {
                 "message_id": message.message_id
@@ -278,7 +287,485 @@ def message_read_status(req:HttpRequest):
             alreadyReadUser.append(vuser.userName)
     
     return_data = {
-        "data": alreadyReadUser
+        "data": alreadyReadUser,
+        "repliedCount": message.repliedCount
     }
     
     return request_success(return_data)
+
+@CheckRequire
+def create_group(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    memberList = require(body, "memberList", "list", err_msg="Missing or error type of [memberList]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    members = User.objects.filter(userName__in=memberList)
+    if len(members) < 2:
+        return request_failed(3, "Group member < 3", 400)
+    
+    chatName = userName
+    max_length = MAX_CHAR_LENGTH
+    friends = user.friends.all()
+    for member in members:
+        if len(chatName) + len(member.userName) + 4 > max_length:
+            chatName += "..."
+            break
+        chatName += "," + member.userName
+        if member not in friends:
+            return request_failed(4, "Not friend", 400)
+    
+    chat = Chat.objects.create(chatName=chatName, isGroup=True, owner=user)
+    for member in members:
+        chat.memberList.add(member)
+        
+    chat.memberList.add(user)
+    chat.save()
+    for member in members:
+        inviteeReadTimestamp = UserReadTimestamp.objects.create(user=member, chat=chat)
+        inviteeReadTimestamp.save()
+    invitorReadTimestamp = UserReadTimestamp.objects.create(user=user, chat=chat)
+    invitorReadTimestamp.save()
+    return_data = {
+        "chat_id": chat.chat_id
+    }
+    return request_success(return_data)
+
+@CheckRequire
+def set_admin(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    ownerName = require(body, "ownerName", "string", err_msg="Missing or error type of [ownerName]")
+    adminList = require(body, "adminList", "list", err_msg="Missing or error type of [adminList]")
+    
+    owner = User.objects.filter(userName=ownerName).first()
+    if not owner:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if ownerName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if chat.owner != owner:
+        return request_failed(3, f"User {ownerName} is not owner of chat {chat_id}", 403)
+    
+    members = chat.memberList.all()
+    admins = User.objects.filter(userName__in=adminList)
+    chat.adminList.clear()
+    
+    for admin in admins:
+        if admin not in members:
+            return request_failed(4, f"User {admin.userName} is not member of chat {chat_id}", 403)
+        chat.adminList.add(admin)
+        chat.save()
+    return request_success()
+
+@CheckRequire
+def change_owner(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    ownerName = require(body, "ownerName", "string", err_msg="Missing or error type of [ownerName]")
+    newOwnerName = require(body, "newOwnerName", "string", err_msg="Missing or error type of [newOwnerName]")
+    
+    owner = User.objects.filter(userName=ownerName).first()
+    if not owner:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if ownerName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if chat.owner != owner:
+        return request_failed(3, f"User {ownerName} is not owner of chat {chat_id}", 403)
+    
+    members = chat.memberList.all()
+    newOwner = User.objects.filter(userName=newOwnerName).first()
+    if not newOwner:
+        return request_failed(1, "User not found", 404)
+    
+    if newOwner not in members:
+        return request_failed(4, f"User {newOwnerName} is not member of chat {chat_id}", 403)
+    
+    adminList = chat.adminList.all()
+    if newOwner in adminList:
+        chat.adminList.remove(newOwner)
+        
+    chat.owner = newOwner
+    chat.save()
+    return request_success()
+
+@CheckRequire
+def leave_group(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if user not in chat.memberList.all():
+        return request_failed(3, f"User {userName} is not member of chat {chat_id}", 403)
+    
+    if user == chat.owner:
+        return request_failed(4, f"User {userName} is owner of chat {chat_id}", 403)
+    
+    chat.memberList.remove(user)
+    chat.save()
+    return request_success()
+
+@CheckRequire
+def remove_member(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    memberName = require(body, "memberName", "string", err_msg="Missing or error type of [memberName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    member = User.objects.filter(userName=memberName).first()
+    if not member:
+        return request_failed(1, "Member not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if user == member:
+        return request_failed(3, "Cannot remove yourself", 403)
+    
+    if user == chat.owner:
+        if member in chat.memberList.all():
+            chat.memberList.remove(member)
+        if member in chat.adminList.all():
+            chat.adminList.remove(member) 
+        chat.save()
+        return request_success()
+    
+    if member == chat.owner or member in chat.adminList.all():
+        return request_failed(4, "Permission denied", 403)
+    
+    if user in chat.adminList.all():
+        if member in chat.memberList.all():
+            chat.memberList.remove(member)
+            chat.save()
+            return request_success()
+    
+    return request_failed(4, "Permission denied", 403)
+
+@CheckRequire
+def invite(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body.decode("utf-8"))
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    inviteeList = require(body, "inviteeList", "list", err_msg="Missing or error type of [inviteeList]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    invitees = User.objects.filter(userName__in=inviteeList)
+    members = chat.memberList.all()
+    userFriends = user.friends.all()
+    
+    if user == chat.owner or user in chat.adminList.all():
+        for invitee in invitees:
+            if invitee not in userFriends:
+                return request_failed(4, "Cannot invite people who is not your friend", 403)
+            if invitee not in members:
+                chat.memberList.add(invitee)
+                chat.save()
+                inviteeReadTimestamp =  UserReadTimestamp.objects.create(user=invitee, chat=chat)
+                inviteeReadTimestamp.save()
+        return request_success()
+    
+    if user not in members:
+        return request_failed(3, f"User {userName} is not member of chat {chat_id}", 403)
+    
+    for invitee in invitees:
+        if invitee not in userFriends:
+            return request_failed(4, "Cannot invite people who is not your friend", 403)
+        if invitee not in members:
+            groupInvitaton = GroupInvitation.objects.create(belongToChat=chat, invitor=user, invitee=invitee)
+            groupInvitaton.save()
+            
+    return request_success()
+
+@CheckRequire
+def group_invitation(req:HttpRequest):
+    if req.method == "GET":
+        userName: str = req.GET.get("userName",'')
+        chat_id: int = req.GET.get("chat_id",0)
+        
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(2,"Invalid request", 401)
+        
+        user = User.objects.filter(userName=userName).first()
+        if not user:
+            return request_failed(1, "User not found", 404)
+        
+        chat = Chat.objects.filter(chat_id=chat_id).first()
+        if not chat:
+            return request_failed(1, "Chat not found", 404)
+        
+        if user != chat.owner and user not in chat.adminList.all():
+            return request_failed(3, "Permission denied", 403)
+        
+        groupInvitations = chat.invitationList.all()
+        return_data = {
+            "data": [
+                return_field(groupInvitation.serialize(), ["invitation_id", "invitorName", "invitorAvatar", "inviteeName", "inviteeAvatar", "created_time", "status"]) for groupInvitation in groupInvitations
+            ]
+        }
+        return request_success(return_data)
+    
+    elif req.method == "POST":
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+        invitation_id = require(body, "invitation_id", "int", err_msg="Missing or error type of [invitation_id]")
+        accept = require(body, "accept", "boolean", err_msg="Missing or error type of [accept]")
+        
+        jwt_token = req.headers.get("Authorization")
+        data = check_jwt_token(jwt_token)
+        if data == None:
+            return request_failed(2,"Invalid or expired JWT", 401)
+        if userName != data["userName"]:
+            return request_failed(2,"Invalid request", 401)
+        
+        user = User.objects.filter(userName=userName).first()
+        if not user:
+            return request_failed(1, "User not found", 404)
+        
+        groupInvitation = GroupInvitation.objects.filter(invitation_id=invitation_id).first()
+        if not groupInvitation:
+            return request_failed(1, "Group invitation not found", 404)
+        
+        chat = groupInvitation.belongToChat
+        if user != chat.owner and user not in chat.adminList.all():
+            return request_failed(3, "Permission denied", 403)
+        
+        invitee = groupInvitation.invitee
+        if accept:
+            chat.memberList.add(invitee)
+            chat.save()
+            inviteeReadTimestamp = UserReadTimestamp.objects.create(user=invitee, chat=chat)
+            inviteeReadTimestamp.save()
+            groupInvitation.status = 1
+            groupInvitation.save()
+            
+        else:
+            groupInvitation.status = -1
+            groupInvitation.save()
+        
+        return request_success()
+    
+    else:
+        return BAD_METHOD
+    
+@CheckRequire
+def chat_name(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    newName = require(body, "newName", "string", err_msg="Missing or error type of [newName]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    owner = chat.owner
+    adminList = chat.adminList.all()
+    if user != owner and user not in adminList:
+        return request_failed(3, "You are not admin of this chat", 403)
+    
+    chat.chatName = newName
+    chat.save()
+    return request_success()
+
+@CheckRequire
+def group_notice(req:HttpRequest):
+    if req.method == "POST":
+        body = json.loads(req.body)
+        userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+        chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+        content = require(body, "content", "string", err_msg="Missing or error type of [content]")
+    elif req.method == "GET":
+        userName = req.GET.get("userName",'')
+        chat_id = req.GET.get("chat_id",0)
+    else:
+        return BAD_METHOD
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    if req.method == "POST":
+        adminList = chat.adminList.all()
+        if user != chat.owner and user not in adminList:
+            return request_failed(3, "You are not admin of this chat", 403)
+        groupNotice = GroupNotice.objects.create(belongToChat=chat, content=content, sender=user)
+        groupNotice.save()
+        content = "群公告: \n" + content
+        groupNoticeMessage = Message.objects.create(belongToChat=chat, content=content, sender=user)
+        groupNoticeMessage.default_visible_to_user_list()
+        groupNoticeMessage.save()
+        channel_layer = get_channel_layer()
+        for member in chat.memberList.all():
+            async_to_sync(channel_layer.group_send)(member.userName, {'type': 'notify'})
+        return_data = {
+            "data": {
+                "groupNotice_id": groupNotice.groupNotice_id,
+                "groupNoticeMessage_id": groupNoticeMessage.message_id,
+            }
+        }
+        return request_success(return_data)
+    
+    elif req.method == "GET":
+        memberList = chat.memberList.all()
+        if user not in memberList:
+            return request_failed(3, "You are not member of this chat", 403)
+        groupNoticeList = GroupNotice.objects.filter(belongToChat=chat).order_by("-created_time")
+        return_data = {
+            "data" : [
+                return_field(groupNotice.serialize(), ['groupNotice_id','senderName','senderAvatar','content','created_time']) for groupNotice in groupNoticeList
+            ]
+        }
+        return request_success(return_data)
+    
+@CheckRequire
+def delete_group_notice(req:HttpRequest):
+    if req.method != "POST":
+        return BAD_METHOD
+    
+    body = json.loads(req.body)
+    userName = require(body, "userName", "string", err_msg="Missing or error type of [userName]")
+    chat_id = require(body, "chat_id", "int", err_msg="Missing or error type of [chat_id]")
+    groupNotice_id = require(body, "groupNotice_id", "int", err_msg="Missing or error type of [groupNotice_id]")
+    
+    user = User.objects.filter(userName=userName).first()
+    if not user:
+        return request_failed(1, "User not found", 404)
+    
+    chat = Chat.objects.filter(chat_id=chat_id).first()
+    if not chat:
+        return request_failed(1, "Chat not found", 404)
+    
+    jwt_token = req.headers.get("Authorization")
+    data = check_jwt_token(jwt_token)
+    if data == None:
+        return request_failed(2,"Invalid or expired JWT", 401)
+    if userName != data["userName"]:
+        return request_failed(2,"Invalid request", 401)
+    
+    groupNotice = GroupNotice.objects.filter(groupNotice_id=groupNotice_id).first()
+    if not groupNotice:
+        return request_failed(1, "Group notice not found", 404)
+    
+    adminList = chat.adminList.all()
+    if user != chat.owner and user not in adminList:
+        return request_failed(3, "You are not admin of this chat", 403)
+    
+    groupNotice.delete()
+    return request_success()

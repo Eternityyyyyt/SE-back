@@ -1,5 +1,6 @@
 from django.test import TestCase
-from user.models import User,FriendRequest
+from user.models import User,FriendRequest,FriendTag
+from django.contrib.auth.hashers import make_password
 from typing import Optional
 import datetime
 import hashlib
@@ -12,13 +13,21 @@ import random
 # Create your tests here.
 
 from utils.utils_jwt import EXPIRE_IN_SECONDS, SALT, b64url_encode
-
+passw = make_password("123456")
 class UserTest(TestCase):
     def setUp(self) -> None:
         test_user_name = "testuser"
-        testuser = User.objects.create(userName="testuser",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试", avatar="/avatar/00.png")
-        testuser2 = User.objects.create(userName="testuser2",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2",avatar="/avatar/00.png" )
-        testuser3 = User.objects.create(userName="testuser3",password = "123456", phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3",avatar="/avatar/00.png")
+        testuser = User.objects.create(userName="testuser",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试", avatar="/avatar/00.png")
+        testuser2 = User.objects.create(userName="testuser2",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试2",avatar="/avatar/00.png" )
+        testuser3 = User.objects.create(userName="testuser3",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试3",avatar="/avatar/00.png")
+        testuser4 = User.objects.create(userName="testuser4",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试4",avatar="/avatar/00.png")
+        testuser5 = User.objects.create(userName="testuser5",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试5",avatar="/avatar/00.png")
+        testuser6 = User.objects.create(userName="testuser6",password = passw, phoneNumber ="12345678901", email = "qwe@qwe.qwe",nickname = "测试6",avatar="/avatar/00.png")
+        testuser4.friends.add(testuser5)
+        testuser4.friends.add(testuser6)
+        tag = FriendTag.objects.create(tagName = "test", belongToUser = testuser4)
+        tag.inTagUserList.add(testuser5)
+        tag = FriendTag.objects.create(tagName = "tet", belongToUser = testuser4)
         return super().setUp()
     # ! Utility functions
     def generate_jwt_token(self, payload: dict, salt: str):
@@ -381,6 +390,19 @@ class UserTest(TestCase):
         self.assertEqual(len(res.json()['friendDataList']),2)
         self.assertEqual(res.json()['friendDataList'][0]['nickname'],'测试2')
         self.assertEqual(res.json()['friendDataList'][1]['nickname'],'测试3')
+    
+    def test_get_friend_list_tags_success(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/friendList/testuser4",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(res.json()['friendDataList'][0]['tags'][0],'test')
+        
+    def test_get_friend_list_bad_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.put("/friendList/testuser4",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
     #!Test getting friend detail info
     def test_get_friend_detail_info_success(self):
         testuser = User.objects.filter(userName='testuser').first()
@@ -393,6 +415,19 @@ class UserTest(TestCase):
         self.assertEqual(res.status_code , 200)
         self.assertEqual(res.json()['code'],0)
         self.assertEqual(res.json()['userData']['email'],'qwe@qwe.qwe')
+        
+    def test_get_friend_detail_info_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/friendList/testuser4/testuser5",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        self.assertEqual(res.json()['userData']['tags'][0],'test')
+        
+    def test_get_friend_detail_info_bad_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.put("/friendList/testuser4/testuser5",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
 
     #!Test delete friend
     def test_delete_friend_success(self):
@@ -486,3 +521,318 @@ class UserTest(TestCase):
         res = self.client.post("/revise/testuser",data=data,content_type='application/json',**headers)
         self.assertEqual(res.status_code , 403)
         self.assertEqual(res.json()['code'],3)
+        
+    def test_create_friendTag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'],0)
+        
+    def test_create_friendTag_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        res = self.client.get("/setFriendTag?userName=testuser4&tagName=tag",data={},content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'],-3)
+        
+    def test_create_friendTag_wrong_jwt_token(self):
+        headers = self.generate_header(username="testuser3")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'],2)
+        
+    def test_create_friendTag_user_not_exist(self):
+        headers = self.generate_header(username="testuser333")
+        data = {
+            "userName": "testuser333",
+            "tagName": "tag",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'],1)
+        
+    def test_create_friendTag_tag_exist(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList": [
+                "testuser5"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],3)
+        
+    def test_create_friendTag_not_friend(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList": [
+                "testuser"
+            ]
+        }
+        res = self.client.post("/setFriendTag",data=data,content_type='application/json',**headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'],4)
+        
+    def test_check_friend_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        url = "/friendTag?userName=testuser4"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        self.assertEqual(res.json()['data'][0]['tag_id'], 1)
+        self.assertEqual(res.json()['data'][0]['tagName'], "test")
+        self.assertEqual(res.json()['data'][0]['inTagUserList'][0], "testuser5")
+        
+    def test_check_friend_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        url = "/friendTag?userName=testuser444"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_check_friend_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        url = "/friendTag?userName=testuser4"
+        res = self.client.get(url,**headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
+        
+    def test_append_tag_list_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":[
+                "testuser6",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_append_tag_list_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList":[
+                "testuser6",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_append_tag_list_not_friend(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":[
+                "testuser",
+            ]
+        }
+        res = self.client.post("/friendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'], 3)
+        
+    def test_delete_friend_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_delete_friend_tag_BAD_METHOD(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.delete("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'], -3)
+        
+    def test_delete_friend_tag_wrong_jwt(self):
+        headers = self.generate_header(username="testuser")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
+        
+    def test_delete_friend_tag_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "tagName": "test",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_delete_friend_tag_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tagg",
+        }
+        res = self.client.post("/deleteFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_revise_friend_tag_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "test1",
+        }
+        res = self.client.post("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_revise_friend_tag_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "test1",
+        }
+        res = self.client.delete("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'], -3)
+        
+    def test_revise_friend_tag_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "test1",
+        }
+        res = self.client.post("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
+        
+    def test_revise_friend_tag_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "tagName": "test",
+            "newName": "test1",
+        }
+        res = self.client.post("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_revise_friend_tag_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test22",
+            "newName": "test1",
+        }
+        res = self.client.post("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_revise_friend_tag_tag_conflict(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "newName": "tet",
+        }
+        res = self.client.post("/reviseFriendTag",data=data,content_type='application/json', **headers)
+        self.assertEqual(res.status_code , 403)
+        self.assertEqual(res.json()['code'], 3)
+        
+    def test_friend_tag_remove_success(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":
+                ["testuser5"],
+        }
+        res = self.client.post("/friendTag/delete",data=data,content_type='application/json', **headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 200)
+        self.assertEqual(res.json()['code'], 0)
+        
+    def test_friend_tag_remove_wrong_method(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":
+                ["testuser5"],
+        }
+        res = self.client.delete("/friendTag/delete",data=data,content_type='application/json', **headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 405)
+        self.assertEqual(res.json()['code'], -3)
+        
+    def test_friend_tag_remove_wrong_jwt(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser4",
+            "tagName": "test",
+            "friendList":
+                ["testuser5"],
+        }
+        res = self.client.post("/friendTag/delete",data=data,content_type='application/json', **headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 401)
+        self.assertEqual(res.json()['code'], 2)
+        
+    def test_friend_tag_remove_user_not_found(self):
+        headers = self.generate_header(username="testuser444")
+        data = {
+            "userName": "testuser444",
+            "tagName": "test",
+            "friendList":
+                ["testuser5"],
+        }
+        res = self.client.post("/friendTag/delete",data=data,content_type='application/json', **headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)
+        
+    def test_friend_tag_remove_tag_not_found(self):
+        headers = self.generate_header(username="testuser4")
+        data = {
+            "userName": "testuser4",
+            "tagName": "tag",
+            "friendList":
+                ["testuser5"],
+        }
+        res = self.client.post("/friendTag/delete",data=data,content_type='application/json', **headers)
+        print(res.json()['info'])
+        self.assertEqual(res.status_code , 404)
+        self.assertEqual(res.json()['code'], 1)

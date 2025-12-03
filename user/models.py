@@ -20,7 +20,10 @@ class User(models.Model):
     class Meta:
         indexes = [models.Index(fields=["userName"])]
         
-    def serialize(self):
+    def serialize(self, tagUser):
+        Tags = self.Tags.all()
+        Tags = Tags.filter(belongToUser = tagUser)
+        tags = [tag.tagName for tag in Tags]
         return {
             "id": self.id, 
             "userName": self.userName, 
@@ -29,6 +32,7 @@ class User(models.Model):
             "email": self.email,
             "created_time": self.created_time,
             "avatar": self.avatar,
+            "tags": tags,
         }
     
     def __str__(self) -> str:
@@ -60,5 +64,17 @@ class FriendRequest(models.Model):
 class FriendTag(models.Model):
     tag_id = models.BigAutoField(primary_key=True)
     tagName = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
-    belongToUser = models.ForeignKey(User, on_delete=models.CASCADE, related_name="belongToUser")
-    inTagUserList = models.ManyToManyField(User, symmetrical=False, related_name="inTagUserList")
+    belongToUser = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendTag")
+    inTagUserList = models.ManyToManyField(User, symmetrical=False, related_name="Tags")
+    
+    def serialize(self):
+        return {
+            "tag_id": self.tag_id,
+            "tagName": self.tagName,
+            "belongToUser": self.belongToUser.userName,
+            "inTagUserList": [user.userName for user in self.inTagUserList.all()]
+        }
+        
+class History(models.Model):
+    history_id = models.BigAutoField(primary_key=True)
+    userName = models.CharField(max_length=MAX_CHAR_LENGTH, unique=True)
